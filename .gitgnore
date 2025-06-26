@@ -1,0 +1,15 @@
+# Ignorar carpetas de compilación
+/build/
+/dist/
+
+# Ignorar archivos compilados
+*.class
+
+# Ignorar configuración privada de NetBeans
+/nbproject/private/
+
+# Ignorar archivos temporales y logs
+*.log
+*.tmp
+*.bak
+*.swp 
