@@ -16,9 +16,13 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("Esto es una prueba");
 <<<<<<< HEAD
+<<<<<<< HEAD
         System.out.println("A");
 =======
 >>>>>>> parent of 07fa70c (Merge pull request #12 from crisstel07/Criss)
+=======
+        System.out.println("Prueba2");
+>>>>>>> origin/main
         // TODO code application logic here
     }
     
