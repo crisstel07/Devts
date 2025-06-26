@@ -17,12 +17,15 @@ public class Main {
         System.out.println("Esto es una prueba");
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         System.out.println("A");
 =======
 >>>>>>> parent of 07fa70c (Merge pull request #12 from crisstel07/Criss)
 =======
         System.out.println("Prueba2");
 >>>>>>> origin/main
+=======
+>>>>>>> parent of 07fa70c (Merge pull request #12 from crisstel07/Criss)
         // TODO code application logic here
     }
     
