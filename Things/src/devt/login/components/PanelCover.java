@@ -1,5 +1,5 @@
 
-package Componet;
+package devt.login.components;
 //Dibuja elementos graficos como lineas, rectangulos, imagenes, etc.
 import java.awt.Color;
 import java.awt.GradientPaint;

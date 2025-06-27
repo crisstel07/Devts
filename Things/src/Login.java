@@ -1,19 +1,46 @@
 
+import devt.login.components.PanelCover;
+import net.miginfocom.swing.MigLayout;
+
 public class Login extends javax.swing.JFrame {
 
+    private MigLayout layout;
+    private PanelCover cover;
+    
     public Login() {
         initComponents();
+        init();
     }
 
+    private void init (){
+        layout = new MigLayout();
+        cover = new PanelCover();
+        bg.setLayout(layout);
+        bg.set
+    }
   
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        panelCover1 = new devt.login.components.PanelCover();
         background = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        javax.swing.GroupLayout panelCover1Layout = new javax.swing.GroupLayout(panelCover1);
+        panelCover1.setLayout(panelCover1Layout);
+        panelCover1Layout.setHorizontalGroup(
+            panelCover1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 100, Short.MAX_VALUE)
+        );
+        panelCover1Layout.setVerticalGroup(
+            panelCover1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 100, Short.MAX_VALUE)
+        );
+
+        getContentPane().add(panelCover1, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 140, -1, -1));
 
         background.setIcon(new javax.swing.ImageIcon(getClass().getResource("/Images/Guzz.png"))); // NOI18N
         background.setPreferredSize(new java.awt.Dimension(1365, 767));
@@ -58,5 +85,6 @@ public class Login extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel background;
+    private devt.login.components.PanelCover panelCover1;
     // End of variables declaration//GEN-END:variables
 }
