@@ -13,3 +13,6 @@
 *.tmp
 *.bak
 *.swp 
+
+# Ignora el cambio de pantalla principal 
+nbproject/project.properties
