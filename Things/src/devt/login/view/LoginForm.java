@@ -1,13 +1,15 @@
+package devt.login.view;
+
 
 import devt.login.components.PanelCover;
 import net.miginfocom.swing.MigLayout;
 
-public class Login extends javax.swing.JFrame {
+public class LoginForm extends javax.swing.JFrame {
 
     private MigLayout layout;
     private PanelCover cover;
     
-    public Login() {
+    public LoginForm() {
         initComponents();
         init();
     }
@@ -15,8 +17,7 @@ public class Login extends javax.swing.JFrame {
     private void init (){
         layout = new MigLayout();
         cover = new PanelCover();
-        bg.setLayout(layout);
-        bg.set
+        
     }
   
     @SuppressWarnings("unchecked")
@@ -65,20 +66,21 @@ public class Login extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(Login.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(LoginForm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(Login.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(LoginForm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(Login.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(LoginForm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(Login.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(LoginForm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
+        //</editor-fold>
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new Login().setVisible(true);
+                new LoginForm().setVisible(true);
             }
         });
     }
