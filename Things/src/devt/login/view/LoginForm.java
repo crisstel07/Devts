@@ -2,50 +2,45 @@ package devt.login.view;
 
 
 import devt.login.components.PanelCover;
+import java.awt.Graphics;
+import java.awt.Image;
+import javax.swing.*;
 import net.miginfocom.swing.MigLayout;
 
 public class LoginForm extends javax.swing.JFrame {
 
-    private MigLayout layout;
     private PanelCover cover;
     
     public LoginForm() {
         initComponents();
-        init();
-    }
-
-    private void init (){
-        layout = new MigLayout();
-        cover = new PanelCover();
+        // Creación del Fondo en un panel.
+        FondoPanel fondo = new FondoPanel(); // Instancia de la clase PanelFondo.
+        fondo.setLayout(new MigLayout("fill")); // Aplicamos MigLayout al fondoPanel.
+        this.setContentPane(fondo); //Se establece como panel principal.
         
+        //Se inicializa laa ventana.
+        this.setSize(1365, 767);
+        this.setLocationRelativeTo(null);
+        this.setResizable(false);
+        this.setDefaultCloseOperation(EXIT_ON_CLOSE); 
+        
+        //Se inicializa el contenido visual del PanelCover
+         init();
+    }
+    
+    private void init (){
+        cover = new PanelCover();
+        cover.setLayout(new MigLayout("wrap 1, align center, insets 20", "[300!]"));         
+        this.getContentPane().add(cover, "width 40%, height 100%, dock west");
+    
     }
   
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        panelCover1 = new devt.login.components.PanelCover();
-        background = new javax.swing.JLabel();
-
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        javax.swing.GroupLayout panelCover1Layout = new javax.swing.GroupLayout(panelCover1);
-        panelCover1.setLayout(panelCover1Layout);
-        panelCover1Layout.setHorizontalGroup(
-            panelCover1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 100, Short.MAX_VALUE)
-        );
-        panelCover1Layout.setVerticalGroup(
-            panelCover1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 100, Short.MAX_VALUE)
-        );
-
-        getContentPane().add(panelCover1, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 140, -1, -1));
-
-        background.setIcon(new javax.swing.ImageIcon(getClass().getResource("/Images/Guzz.png"))); // NOI18N
-        background.setPreferredSize(new java.awt.Dimension(1365, 767));
-        getContentPane().add(background, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, -1, -1));
 
         pack();
         setLocationRelativeTo(null);
@@ -86,7 +81,16 @@ public class LoginForm extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JLabel background;
-    private devt.login.components.PanelCover panelCover1;
     // End of variables declaration//GEN-END:variables
+}
+class FondoPanel extends JPanel {
+    private Image imagen;
+
+    @Override
+    public void paint(Graphics g) {
+        imagen = new ImageIcon(getClass().getResource("/devt/login/images/Guzz.png")).getImage();
+        g.drawImage(imagen, 0, 0, getWidth(), getHeight(), this);
+        setOpaque(false);
+        super.paint(g);
+    }
 }
