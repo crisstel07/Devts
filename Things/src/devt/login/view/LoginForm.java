@@ -30,8 +30,8 @@ public class LoginForm extends javax.swing.JFrame {
     
     private void init (){
         cover = new PanelCover();
-        cover.setLayout(new MigLayout("wrap 1, align center, insets 20", "[300!]"));         
-        this.getContentPane().add(cover, "width 40%, height 100%, dock west");
+        cover.setLayout(new MigLayout("wrap 1, align center, insets 20", "[300!]"));  // Con esto Layout centra cualquier contenido dentro del Panel Cover.       
+        this.getContentPane().add(cover, "width 40%, height 100%, dock west"); // Se posiciona el PanelCover a la mitad del From.
     
     }
   
