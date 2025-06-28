@@ -2,10 +2,12 @@ package devt.login.view;
 
 // Librerias bases 
 import devt.login.components.PanelCover;
+import devt.login.components.PanelLoginAndRegister;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.text.DecimalFormat;
 import javax.swing.*;
 
 // MigLayout para organizar componentes de manera facil.
@@ -16,34 +18,40 @@ import org.jdesktop.animation.timing.*;
 
 public class LoginForm extends javax.swing.JFrame {
 
+    private FondoPanel fondo; // Variable local para acceder desde cualquier metodo
     private MigLayout layout; // Layout para posicionar dinámicamente el contenido
     private PanelCover cover; // PAnelCover que se desliza.
+    private PanelLoginAndRegister loginAndRegister; // Panel del Login y Register
     private Animator animator; // Controlador de animaciones de Trident
     private boolean isLogin = false;
-    private final double coverSize = 40; // Porcentaje del ancho que ocupa el PanelCover
-    private FondoPanel fondo; // Variable local para acceder desde cualquier metodo
-    
+    private final double addSize = 30;
+    private final double coverSize = 45; // Porcentaje del ancho que ocupa el PanelCover
+    private final double loginSize = 55;
+    private final DecimalFormat df = new DecimalFormat("##0.###");
     
     public LoginForm() {
         initComponents();
 
-        // Creación del Fondo en un panel.
+         //Se inicializa laa ventana.
+        this.setSize(1365, 767); // Tamaño de la ventana
+        this.setLocationRelativeTo(null);
+        this.setResizable(false);
+        this.setDefaultCloseOperation(EXIT_ON_CLOSE);
+
+        // Creación del Fondo del panel.
         fondo = new FondoPanel();
         layout = new MigLayout("fill, insets 0"); // Aplicamos MigLayout al fondoPanel.
         fondo.setLayout(layout);
         this.setContentPane(fondo); //Se establece como panel principal.
 
         cover = new PanelCover(); // Instancia del panel que se moverá
-        fondo.add(cover, "width 40%, pos 0al 0 n 100%");// Posicionamos el panel inicialmente a la izquierda
+        loginAndRegister = new PanelLoginAndRegister();// Instancia del panel LoginAndRegister.
+       
+        fondo.add(cover, "width 45%, pos 0al 0 n 100%");// Posicionamos el panel inicialmente a la izquierda
+        fondo.add(loginAndRegister, "width 55%, pos 1al 0 n 100%");
+        
+        init(); //Se inicializa el contenido visual del PanelCover
 
-        //Se inicializa laa ventana.
-        this.setSize(1365, 767); // Tamaño de la ventana
-        this.setLocationRelativeTo(null);
-        this.setResizable(false);
-        this.setDefaultCloseOperation(EXIT_ON_CLOSE);
-
-        //Se inicializa el contenido visual del PanelCover
-        init();
     }
 
     // Método que contiene toda la lógica de animación y el listener del botón.
@@ -53,7 +61,18 @@ public class LoginForm extends javax.swing.JFrame {
             @Override
             public void timingEvent(float fraction) {
                 double fractionCover = isLogin ? 1f - fraction : fraction;
-                layout.setComponentConstraints(cover, "width 40%, pos " + fractionCover + "al 0 n 100%");
+                double fractionLogin = isLogin ? fraction : 1f - fraction;
+                double size = coverSize;
+                if(fraction <= 0.5f){
+                    size += fraction * addSize;
+                }else{
+                    size += addSize - fraction * addSize;
+                }
+                fractionCover = Double.valueOf(df.format(fractionCover ));
+                fractionLogin = Double.valueOf(df.format(fractionLogin));
+                
+                layout.setComponentConstraints(cover, "width " + size + "%, pos " + fractionCover + "al 0 n 100%");
+                layout.setComponentConstraints(loginAndRegister, "width " + loginSize + "%, pos " + fractionLogin + "al 0 n 100%");
                 fondo.revalidate();
             }
 
@@ -66,8 +85,10 @@ public class LoginForm extends javax.swing.JFrame {
         };
 
         animator = new Animator(800, target); // Creacion del animador con duraciòn de 800 milisegundos.
-        animator.setResolution(10); // Suavidad de la animación
-
+        animator.setAcceleration(0.5f);
+        animator.setDeceleration(0.5f);
+        // animator.setResolution(10); // Suavidad de la animación
+        animator.setResolution(0); //Para una animación fluida.
         // Creaciòn de un evento desde el PanelCover que se dispara al presionar su botón
         cover.addEvent(new ActionListener() {
             @Override
