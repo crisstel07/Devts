@@ -16,7 +16,7 @@ import net.miginfocom.swing.MigLayout;
 // Librería para animación (TimingTarget, TimmingTargetAdapter, Animator).
 import org.jdesktop.animation.timing.*;
 
-public class LoginForm extends javax.swing.JFrame {
+public class LoginBase extends javax.swing.JFrame {
 
     private FondoPanel fondo; // Variable local para acceder desde cualquier metodo
     private MigLayout layout; // Layout para posicionar dinámicamente el contenido
@@ -29,7 +29,7 @@ public class LoginForm extends javax.swing.JFrame {
     private final double loginSize = 55;
     private final DecimalFormat df = new DecimalFormat("##0.###");
     
-    public LoginForm() {
+    public LoginBase() {
         initComponents();
 
          //Se inicializa laa ventana.
@@ -67,6 +67,26 @@ public class LoginForm extends javax.swing.JFrame {
                     size += fraction * addSize;
                 }else{
                     size += addSize - fraction * addSize;
+                }
+                if (isLogin) {
+                    fractionCover = 1f - fraction;
+                    fractionLogin = fraction;
+                    if (fraction >= 0.5f) {
+                        cover.registerRight(fractionCover * 100);
+                    } else {
+                        cover.loginRight(fractionLogin * 100);
+                    }
+                } else {
+                    fractionCover = fraction;
+                    fractionLogin = 1f - fraction;
+                    if (fraction <= 0.5f) {
+                        cover.registerLeft(fraction * 100);
+                    } else {
+                        cover.loginLeft((1f - fraction) * 100);
+                    }
+                }
+                if (fraction >= 0.5f) {
+                    loginAndRegister.showRegister(isLogin);
                 }
                 fractionCover = Double.valueOf(df.format(fractionCover ));
                 fractionLogin = Double.valueOf(df.format(fractionLogin));
@@ -125,21 +145,23 @@ public class LoginForm extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(LoginForm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(LoginBase.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(LoginForm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(LoginBase.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(LoginForm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(LoginBase.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(LoginForm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(LoginBase.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
+        //</editor-fold>
+        //</editor-fold>
         //</editor-fold>
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new LoginForm().setVisible(true);
+                new LoginBase().setVisible(true);
             }
             
         });
@@ -155,7 +177,7 @@ class FondoPanel extends JPanel {
 
     @Override
     public void paint(Graphics g) {
-        imagen = new ImageIcon(getClass().getResource("/devt/login/images/Guzz.png")).getImage();
+        imagen = new ImageIcon(getClass().getResource("/devt/login/images/guzz_1.png")).getImage();
         g.drawImage(imagen, 0, 0, getWidth(), getHeight(), this);
         setOpaque(false);
         super.paint(g);

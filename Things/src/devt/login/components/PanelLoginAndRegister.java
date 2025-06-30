@@ -1,77 +1,155 @@
 
 package devt.login.components;
 //Dibuja elementos graficos como lineas, rectangulos, imagenes, etc.
+import devt.login.swing.Button;
+import devt.login.swing.MyPasswordField;
+import devt.login.swing.MyTextField;
 import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Font;
 import java.awt.GradientPaint; // Pinta el fondo
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.event.ActionListener;
+import javax.swing.*;
+import net.miginfocom.swing.MigLayout;
 
-public class PanelLoginAndRegister extends javax.swing.JPanel {
+public class PanelLoginAndRegister extends javax.swing.JLayeredPane {
 
-    private ActionListener event;
-    
     public PanelLoginAndRegister() {
         initComponents();
         setOpaque(false); // indica cuando un componet es trasnparente o no opaco.
+         
+        initRegister();
+        initLogin();
+        login.setVisible(false);
+        register.setVisible(true);
+        
+        // Paneles trasnparentes (login and register)
+        login.setOpaque(false);
+        register.setOpaque(false);
         
     }
 
+    private void initRegister(){
+        // Titutlo
+        register.setLayout(new  MigLayout("wrap", "push[center]push", "push[]25[]10[]10[]25[]push"));
+        
+        //Registro
+        JLabel label = new JLabel("Crea una Cuenta");
+        label.setFont(new Font("sansserif", 1, 30));
+        label.setForeground(new Color(68,148,125));
+        register.add(label);
+        MyTextField txtUser = new  MyTextField();
+        txtUser.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/user.png")));
+        txtUser.setHint("Nombre");
+        register.add(txtUser, "w 60%");
+        
+        //Email
+        MyTextField txtEmail = new MyTextField();
+        txtEmail.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/mail.png")));
+        txtEmail.setHint("Email");
+        register.add(txtEmail, "w 60%");
+        
+        //Password
+        MyPasswordField txtPass = new MyPasswordField();
+        txtPass.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/pass.png")));
+        txtPass.setHint("Contraseña");
+        register.add(txtPass, "w 60%");
+        Button cmd = new Button();
+        cmd.setBackground(new Color(68,148,125));
+        cmd.setForeground(new Color(250, 250, 250));
+        cmd.setText("INICIAR SESIÓN");
+        register.add(cmd, "w 40%, h 40");
+    }
+    
+    private void initLogin (){
+     // Tutulo
+     login.setLayout(new MigLayout("wrap", "push[center]push", "push[]25[]10[]10[]25[]push"));
+     
+     //Ingreso  
+     JLabel label = new JLabel("Iniciar Sesión");
+        label.setFont(new Font("sansserif", 1, 30));
+        label.setForeground(new Color(68,148,125));
+        login.add(label);
+        MyTextField txtEmail = new MyTextField();
+        txtEmail.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/mail.png")));
+        txtEmail.setHint("Email");
+        login.add(txtEmail, "w 60%");
+        
+        //Password
+        MyPasswordField txtPass = new MyPasswordField();
+        txtPass.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/pass.png")));
+        txtPass.setHint("Contraseña");
+        login.add(txtPass, "w 60%");
+        JButton cmdForget = new JButton("¿ Olvidaste tu contraseña ?");
+        cmdForget.setForeground(new Color(100, 100, 100));
+        cmdForget.setFont(new Font("sansserif", 1, 12));
+        cmdForget.setContentAreaFilled(false); // No pinta el fondo
+        cmdForget.setBorderPainted(false); // No dibuja el borde
+        cmdForget.setFocusPainted(false); // Quita el efecto de focus (clic)
+        cmdForget.setOpaque(false);  //Se asegura de opacar el button.
+        cmdForget.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        login.add(cmdForget);
+        Button cmd = new Button();
+        cmd.setBackground(new Color(68,148,125));
+        cmd.setForeground(new Color(250, 250, 250));
+        cmd.setText("INICIAR SESIÓN");
+        login.add(cmd, "w 40%, h 40");
+        
+    }
+    
+    public void showRegister(boolean show){
+         if (show) {
+            register.setVisible(true);
+            login.setVisible(false);
+        } else {
+            register.setVisible(false);
+            login.setVisible(true);
+        }  
+    }
+    
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jButton2 = new javax.swing.JButton();
+        login = new javax.swing.JPanel();
+        register = new javax.swing.JPanel();
 
-        jButton2.setText("Test Animation");
-        jButton2.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton2ActionPerformed(evt);
-            }
-        });
+        setLayout(new java.awt.CardLayout());
 
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
-        this.setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGap(155, 155, 155)
-                .addComponent(jButton2)
-                .addContainerGap(135, Short.MAX_VALUE))
+        javax.swing.GroupLayout loginLayout = new javax.swing.GroupLayout(login);
+        login.setLayout(loginLayout);
+        loginLayout.setHorizontalGroup(
+            loginLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 400, Short.MAX_VALUE)
         );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addContainerGap(215, Short.MAX_VALUE)
-                .addComponent(jButton2)
-                .addGap(62, 62, 62))
+        loginLayout.setVerticalGroup(
+            loginLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 300, Short.MAX_VALUE)
         );
+
+        add(login, "card3");
+
+        javax.swing.GroupLayout registerLayout = new javax.swing.GroupLayout(register);
+        register.setLayout(registerLayout);
+        registerLayout.setHorizontalGroup(
+            registerLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 400, Short.MAX_VALUE)
+        );
+        registerLayout.setVerticalGroup(
+            registerLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 300, Short.MAX_VALUE)
+        );
+
+        add(register, "card2");
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        if (event != null) {
-            event.actionPerformed(evt);
-        }
-    }//GEN-LAST:event_jButton2ActionPerformed
-
-    @Override
-    // Fondo Semi-Transparenre (Estilo vidrio)
-    protected void paintComponent (Graphics grphcs){
-        Graphics2D g2 = (Graphics2D) grphcs;
-        Color color1 = new Color(1,14,42, 100);
-        Color color2 = new Color(1,14,42, 100);
-        GradientPaint gra = new GradientPaint(0,0,color1, 0, getHeight(), color2);
-        g2.setPaint(gra);
-        g2.fillRect(0, 0,getWidth(),getHeight());
-        super.paintComponent(grphcs); //Para cambiar el cuerpo de los métodos generados, seleccione Herramientas/Plantillas
-
-    }
+  
      
-     public void addEvent(ActionListener event) {
-        this.event = event;
-    }
+   
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton2;
+    private javax.swing.JPanel login;
+    private javax.swing.JPanel register;
     // End of variables declaration//GEN-END:variables
 }

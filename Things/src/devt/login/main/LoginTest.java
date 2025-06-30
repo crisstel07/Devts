@@ -1,7 +1,7 @@
 
 package devt.login.main;
 
-import devt.login.view.LoginForm;
+import devt.login.view.LoginBase;
 import javax.swing.SwingUtilities;
 
 public class LoginTest {
@@ -9,7 +9,7 @@ public class LoginTest {
         //Asegura que el formulario se abra en el hilo de eventos de Swing
         //Evita errores de interfaz.
         SwingUtilities.invokeLater(() -> { 
-            new LoginForm().setVisible(true);
+            new LoginBase().setVisible(true);
         });
     }
 }
