@@ -1,6 +1,7 @@
 
 package devt.login.components;
 //Dibuja elementos graficos como lineas, rectangulos, imagenes, etc.
+import devt.login.model.ModelUser;
 import devt.login.swing.Button;
 import devt.login.swing.MyPasswordField;
 import devt.login.swing.MyTextField;
@@ -10,11 +11,19 @@ import java.awt.Font;
 import java.awt.GradientPaint; // Pinta el fondo
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import javax.swing.*;
 import net.miginfocom.swing.MigLayout;
 
 public class PanelLoginAndRegister extends javax.swing.JLayeredPane {
 
+    public ModelUser getUser() {
+        return user;
+    }
+    private ModelUser user;
+
+    
     public PanelLoginAndRegister() {
         initComponents();
         setOpaque(false); // indica cuando un componet es trasnparente o no opaco.
@@ -58,8 +67,17 @@ public class PanelLoginAndRegister extends javax.swing.JLayeredPane {
         Button cmd = new Button();
         cmd.setBackground(new Color(68,148,125));
         cmd.setForeground(new Color(250, 250, 250));
-        cmd.setText("INICIAR SESIÓN");
+        cmd.setText("REGISTRARSE");
         register.add(cmd, "w 40%, h 40");
+         cmd.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ae) {
+                String userName = txtUser.getText().trim();
+                String email = txtEmail.getText().trim();
+                String password = String.valueOf(txtPass.getPassword());
+                user = new ModelUser(0, userName, email, password);
+            }
+        });
     }
     
     private void initLogin (){

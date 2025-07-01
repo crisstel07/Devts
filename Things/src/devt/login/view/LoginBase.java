@@ -1,12 +1,22 @@
 package devt.login.view;
 
 // Librerias bases 
+import devt.componet.Message;
 import devt.login.components.PanelCover;
 import devt.login.components.PanelLoginAndRegister;
+import devt.login.connection.DBConnection;
+import devt.login.model.ModelUser;
+import devt.login.service.ServiceMail;
+import devt.login.service.ServiceUser;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
+import net.miginfocom.swing.MigLayout;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
 import javax.swing.*;
 
@@ -120,6 +130,24 @@ public class LoginBase extends javax.swing.JFrame {
         });
     }
 
+    private void register (){
+    ModelUser user = loginAndRegister.getUser();
+        try {
+             if (service.checkDuplicateUser(user.getUserName())) {
+                showMessage(Message.MessageType.ERROR, "User name already exit");
+            } else if (service.checkDuplicateEmail(user.getEmail())) {
+                showMessage(Message.MessageType.ERROR, "Email already exit");
+            } else {
+                service.insertUser(user);
+                sendMain(user);
+            }
+        } catch (Exception e) {
+            showMessage(Messa);
+        }
+ {
+    }
+    }
+    
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -157,8 +185,33 @@ public class LoginBase extends javax.swing.JFrame {
         //</editor-fold>
         //</editor-fold>
         //</editor-fold>
+        /* Create and display the form */
+        
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(LoginBase.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (InstantiationException ex) {
+            java.util.logging.Logger.getLogger(LoginBase.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(LoginBase.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(LoginBase.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+        //</editor-fold>
 
         /* Create and display the form */
+        try {
+             DBConnection.getInstance().connectToDatabase();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 new LoginBase().setVisible(true);

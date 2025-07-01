@@ -47,10 +47,10 @@ public class PanelCover extends javax.swing.JPanel {
         description1.setForeground(new Color(245, 245, 245));
         add(description1);
         button = new ButtonOutLine();
-        button.setBorderPainted(false);
-        button.setContentAreaFilled(false);
-        button.setFocusPainted(false);
-        button.setOpaque(false);
+        button.setBorderPainted(false); // Quita el borde blanco
+        button.setContentAreaFilled(false); // No pinta el fondo
+        button.setFocusPainted(false);  // Quita el recuadro al hacer clic
+        button.setOpaque(false);// Se asegura de el button se transparente.
         button.setBackground(new Color(255, 255, 255));
         button.setForeground(new Color(255, 255, 255));
         button.setText("INICIAR SESIÓN");
@@ -131,7 +131,7 @@ public class PanelCover extends javax.swing.JPanel {
                 title.setText("¡Oye, crack!");
                 description.setText("<html><div style='text-align: center;'>Es momento de insertar tus datos y comenzar la misión<br>¡Prepárate para la locura!</div></html>");
                 description1.setText("No olvides tener tu contraseña a la mano"); 
-                button.setText("INICIAR SESIÓN");
+                button.setText("REGISTRARSE");
             } else {
                 title.setText("¡Bienvenido a tu aventura!");
                 description.setText("<html><div style='text-align: center;'>¿Listo para la acción?<br>Tu próxima aventura te espera</div></html>");
