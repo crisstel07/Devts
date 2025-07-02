@@ -18,17 +18,16 @@ import net.miginfocom.swing.MigLayout;
 
 public class PanelLoginAndRegister extends javax.swing.JLayeredPane {
 
+    private ModelUser user;
     public ModelUser getUser() {
         return user;
-    }
-    private ModelUser user;
-
-    
-    public PanelLoginAndRegister() {
+    }  
+     
+    public PanelLoginAndRegister(ActionListener eventRegister) {
         initComponents();
         setOpaque(false); // indica cuando un componet es trasnparente o no opaco.
          
-        initRegister();
+        initRegister(eventRegister);
         initLogin();
         login.setVisible(false);
         register.setVisible(true);
@@ -39,7 +38,7 @@ public class PanelLoginAndRegister extends javax.swing.JLayeredPane {
         
     }
 
-    private void initRegister(){
+    private void initRegister(ActionListener eventRegister){
         // Titutlo
         register.setLayout(new  MigLayout("wrap", "push[center]push", "push[]25[]10[]10[]25[]push"));
         
@@ -67,6 +66,7 @@ public class PanelLoginAndRegister extends javax.swing.JLayeredPane {
         Button cmd = new Button();
         cmd.setBackground(new Color(68,148,125));
         cmd.setForeground(new Color(250, 250, 250));
+        cmd.addActionListener(eventRegister);
         cmd.setText("REGISTRARSE");
         register.add(cmd, "w 40%, h 40");
          cmd.addActionListener(new ActionListener() {

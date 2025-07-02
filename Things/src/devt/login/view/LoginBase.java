@@ -1,8 +1,8 @@
 package devt.login.view;
 
 // Librerias bases 
-import devt.componet.Message;
 import devt.login.components.PanelCover;
+import devt.login.components.PanelLoading;
 import devt.login.components.PanelLoginAndRegister;
 import devt.login.connection.DBConnection;
 import devt.login.model.ModelUser;
@@ -31,6 +31,7 @@ public class LoginBase extends javax.swing.JFrame {
     private FondoPanel fondo; // Variable local para acceder desde cualquier metodo
     private MigLayout layout; // Layout para posicionar dinámicamente el contenido
     private PanelCover cover; // PAnelCover que se desliza.
+    private PanelLoading loading;
     private PanelLoginAndRegister loginAndRegister; // Panel del Login y Register
     private Animator animator; // Controlador de animaciones de Trident
     private boolean isLogin = false;
@@ -53,9 +54,15 @@ public class LoginBase extends javax.swing.JFrame {
         layout = new MigLayout("fill, insets 0"); // Aplicamos MigLayout al fondoPanel.
         fondo.setLayout(layout);
         this.setContentPane(fondo); //Se establece como panel principal.
-
         cover = new PanelCover(); // Instancia del panel que se moverá
-        loginAndRegister = new PanelLoginAndRegister();// Instancia del panel LoginAndRegister.
+        ActionListener eventRegister = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                register();
+            }
+        };
+                
+        loginAndRegister = new PanelLoginAndRegister(eventRegister);// Instancia del panel LoginAndRegister.
        
         fondo.add(cover, "width 45%, pos 0al 0 n 100%");// Posicionamos el panel inicialmente a la izquierda
         fondo.add(loginAndRegister, "width 55%, pos 1al 0 n 100%");
@@ -66,7 +73,8 @@ public class LoginBase extends javax.swing.JFrame {
 
     // Método que contiene toda la lógica de animación y el listener del botón.
     private void init() {
-
+ 
+        loading = new PanelLoading();
         TimingTarget target = new TimingTargetAdapter() { // Creacion de TimingTarget.
             @Override
             public void timingEvent(float fraction) {
@@ -117,8 +125,8 @@ public class LoginBase extends javax.swing.JFrame {
         animator = new Animator(800, target); // Creacion del animador con duraciòn de 800 milisegundos.
         animator.setAcceleration(0.5f);
         animator.setDeceleration(0.5f);
-        // animator.setResolution(10); // Suavidad de la animación
         animator.setResolution(0); //Para una animación fluida.
+         fondo.setLayer(loading, JLayeredPane.POPUP_LAYER);
         // Creaciòn de un evento desde el PanelCover que se dispara al presionar su botón
         cover.addEvent(new ActionListener() {
             @Override
@@ -130,23 +138,12 @@ public class LoginBase extends javax.swing.JFrame {
         });
     }
 
-    private void register (){
-    ModelUser user = loginAndRegister.getUser();
-        try {
-             if (service.checkDuplicateUser(user.getUserName())) {
-                showMessage(Message.MessageType.ERROR, "User name already exit");
-            } else if (service.checkDuplicateEmail(user.getEmail())) {
-                showMessage(Message.MessageType.ERROR, "Email already exit");
-            } else {
-                service.insertUser(user);
-                sendMain(user);
-            }
-        } catch (Exception e) {
-            showMessage(Messa);
-        }
- {
+    private void register() {
+        ModelUser user = loginAndRegister.getUser();
+        // loading.setVisible(true);
+        showMessage(Message.MessageType.ERROR, "Test Message");
     }
-    }
+    
     
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
