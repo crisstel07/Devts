@@ -20,25 +20,26 @@ public class ServiceUser {
     }
 
     public void insertUser(ModelUser user) throws SQLException {
-        String code = generateVerifyCode();
+          // Genera el código de verificación aquí, asegurando que sea único
+        String generatedCode = generateVerifyCode(); // Llama a tu método privado que verifica duplicados
 
         PreparedStatement p = con.prepareStatement(
-            "INSERT INTO `Usuarios` (nombre_usuario, correo, password, VerifyCode, Status) VALUES (?,?,?,?,?)",
-            PreparedStatement.RETURN_GENERATED_KEYS
+                "INSERT INTO `Usuarios` (nombre_usuario, correo, password, VerifyCode, Status) VALUES (?,?,?,?,?)",
+                PreparedStatement.RETURN_GENERATED_KEYS
         );
-         p.setString(1, user.getnombre_usuario());
-    p.setString(2, user.getcorreo());
-    p.setString(3, user.getPassword());
-    p.setString(4, ""); // Vacío, porque ya se verificó
-    p.setString(5, "Verified");
-    
+        p.setString(1,user.getnombre_usuario());
+        p.setString(2, user.getcorreo());
+        p.setString(3, user.getPassword());
+        p.setString(4, generatedCode); // Vacío, porque ya se verificó
+        p.setString(5, "Pending");
+
         p.execute();
 
         ResultSet r = p.getGeneratedKeys();
         if (r.next()) {
              user.setid(r.getInt(1));
         }
-        user.setVerifyCode(code);
+        user.setVerifyCode(generatedCode);
 
         r.close();
         p.close();
@@ -48,59 +49,60 @@ public class ServiceUser {
         DecimalFormat df = new DecimalFormat("000000");
         Random ran = new Random();
         String code = df.format(ran.nextInt(1000000));
-        while (checkDuplicateCode(code)) {
+         do {
             code = df.format(ran.nextInt(1000000));
-        }
+        } while (checkDuplicateCode(code)); // Asegura que el código no exista ya en la DB
         return code;
     }
 
     private boolean checkDuplicateCode(String code) throws SQLException {
         boolean duplicate = false;
-        PreparedStatement p = con.prepareStatement("SELECT id FROM `Usuarios` WHERE VerifyCode=? LIMIT 1");
-        p.setString(1, code);
-        ResultSet r = p.executeQuery();
-        if (r.next()) {
-            duplicate = true;
-        }
-        r.close();
-        p.close();
+        // Usa try-with-resources para cerrar PreparedStatement y ResultSet automáticamente
+        try (PreparedStatement p = con.prepareStatement("SELECT id FROM `Usuarios` WHERE VerifyCode=? LIMIT 1")) {
+            p.setString(1, code);
+            try (ResultSet r = p.executeQuery()) {
+                if (r.next()) {
+                    duplicate = true;
+                }
+            }
+        } // p y r se cierran automáticamente aquí
         return duplicate;
     }
 
-    public boolean checkDuplicateUser(String user) throws SQLException {
+    public boolean checkDuplicateUser(String userName) throws SQLException {
         boolean duplicate = false;
-        PreparedStatement p = con.prepareStatement("SELECT id FROM `Usuarios` WHERE nombre_usuario=? AND `Status`='Verified' LIMIT 1");
-        p.setString(1, user);
-        ResultSet r = p.executeQuery();
-        if (r.next()) {
-            duplicate = true;
+        try (PreparedStatement p = con.prepareStatement("SELECT id FROM `Usuarios` WHERE nombre_usuario=? AND `Status`='Verified' LIMIT 1")) {
+            p.setString(1, userName);
+            try (ResultSet r = p.executeQuery()) {
+                if (r.next()) {
+                    duplicate = true;
+                }
+            }
         }
-        r.close();
-        p.close();
         return duplicate;
     }
 
-    public boolean checkDuplicateEmail(String email) throws SQLException {
+   public boolean checkDuplicateEmail(String email) throws SQLException { // Cambiado 'correo' a 'email' para consistencia con ModelUser
         boolean duplicate = false;
-        PreparedStatement p = con.prepareStatement("SELECT id FROM `Usuarios` WHERE correo=? AND `Status`='Verified' LIMIT 1");
-        p.setString(1, email);
-        ResultSet r = p.executeQuery();
-        if (r.next()) {
-            duplicate = true;
+        try (PreparedStatement p = con.prepareStatement("SELECT id FROM `Usuarios` WHERE correo=? AND `Status`='Verified' LIMIT 1")) {
+            p.setString(1, email);
+            try (ResultSet r = p.executeQuery()) {
+                if (r.next()) {
+                    duplicate = true;
+                }
+            }
         }
-        r.close();
-        p.close();
         return duplicate;
     }
 
     public void doneVerify(int id) throws SQLException {
-        PreparedStatement p = con.prepareStatement("UPDATE `Usuarios` SET VerifyCode='', `Status`='Verified' WHERE id=? LIMIT 1");
-        p.setInt(1, id);
-        p.execute();
-        p.close();
+        try (PreparedStatement p = con.prepareStatement("UPDATE `Usuarios` SET VerifyCode='', `Status`='Verified' WHERE id=? LIMIT 1")) {
+            p.setInt(1, id);
+            p.execute();
+        }
     }
 
-    public boolean verifyCodeWithUser(int id, String code) throws SQLException {
+     public boolean verifyCodeWithUser(int id, String code) throws SQLException {
         boolean verify = false;
         PreparedStatement p = con.prepareStatement("SELECT id FROM `Usuarios` WHERE id=? AND VerifyCode=? LIMIT 1");
         p.setInt(1, id);
@@ -113,10 +115,7 @@ public class ServiceUser {
         p.close();
         return verify;
     }
+     
     
-    public String generateCode() {
-    // Genera un número aleatorio entre 100000 y 999999
-    return String.valueOf((int)(Math.random() * 900000) + 100000);
-}
 }
 

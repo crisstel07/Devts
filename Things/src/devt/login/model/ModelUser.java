@@ -8,22 +8,26 @@ public class ModelUser {
     private String correo;
     private String password;
     private String verifyCode;
-
-    // Constructor completo
+    
+// Constructor completo
     public ModelUser(int id, String nombre_usuario, String correo, String password, String verifyCode) {
         this.id = id;
         this.nombre_usuario = nombre_usuario;
         this.correo = correo;
         this.password = password;
         this.verifyCode = verifyCode;
+        
     }
-
     // Constructor sin VerifyCode
-    public ModelUser(int id, String nombre_usuario, String correo, String password) {
-        this(id, nombre_usuario, correo, password, null);
-    }
 
-    // Constructor vacío (muy útil si se usará con setters)
+    public ModelUser(int id, String nombre_usuario, String correo, String password) {
+        this.id = id;
+        this.nombre_usuario = nombre_usuario;
+        this.correo = correo;
+        this.password = password;
+    }
+    
+    // Constructor vacío 
     public ModelUser() {}
 
     // Getters y Setters
@@ -66,4 +70,6 @@ public class ModelUser {
     public void setVerifyCode(String verifyCode) {
         this.verifyCode = verifyCode;
     }
+     
+   
 }

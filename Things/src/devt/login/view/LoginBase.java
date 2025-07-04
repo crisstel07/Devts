@@ -39,13 +39,12 @@ public class LoginBase extends javax.swing.JFrame {
     
     private PanelLoginAndRegister loginAndRegister; // Panel del Login y Register
     private Animator animator; // Controlador de animaciones de Trident
-    private boolean isLogin = false;
+    private boolean isLogin;
     private final double addSize = 30;
     private final double coverSize = 45; // Porcentaje del ancho que ocupa el PanelCover
     private final double loginSize = 55;
-    private final DecimalFormat df = new DecimalFormat("##0.###");
-    private ServiceUser service;
-    
+    private final DecimalFormat df = new DecimalFormat("##0.###", DecimalFormatSymbols.getInstance(Locale.US));    private ServiceUser service;
+
     public LoginBase() {
         initComponents();
 
@@ -161,6 +160,7 @@ public class LoginBase extends javax.swing.JFrame {
         } catch (SQLException e) {
             showMessage(Message.MessageType.ERROR, "Error saving user");
             e.printStackTrace();
+            
         }
     }
 });
@@ -175,13 +175,12 @@ public class LoginBase extends javax.swing.JFrame {
         } else if (service.checkDuplicateEmail(user.getcorreo())) {
             showMessage(Message.MessageType.ERROR, "Email already exists");
         } else {
-            String code = service.generateCode();
-            user.setVerifyCode(code);
-            sendMain(user); // Envía correo
+             service.insertUser(user); // Se inserta el usuario, y el 'user' ModelUser ahora tiene el ID y el VerifyCode
+            sendMain(user); // <--- Envía el correo usando el VerifyCode que ServiceUser.insertUser le asignó al objeto 'user'
         }
     } catch (SQLException e) {
-        e.printStackTrace();  // <- Esto imprimirá la traza completa del error
-        showMessage(Message.MessageType.ERROR, "Error Register");
+        showMessage(Message.MessageType.ERROR, "Error during registration");
+        e.printStackTrace(); // ¡MUY IMPORTANTE para ver errores de SQL en la consola!
     }
 }
 
