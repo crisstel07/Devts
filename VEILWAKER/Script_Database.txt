@@ -1,0 +1,79 @@
+CREATE DATABASE bd_veilwaker;
+USE bd_veilwaker;
+
+-- Tabla Personas
+CREATE TABLE Personas (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    Correo VARCHAR(100) NOT NULL,
+    Usuario VARCHAR(50) NOT NULL,
+    Contraseña VARCHAR(50) NOT NULL,
+    Rol VARCHAR(30) NOT NULL
+);
+
+-- Tabla Armas
+CREATE TABLE Armas (
+    IdArmas INT AUTO_INCREMENT PRIMARY KEY,
+    Nombre VARCHAR(50),
+    Tipo VARCHAR(50),
+    Descripcion TEXT,
+    Efecto TEXT,
+    Composicion TEXT
+);
+
+-- Tabla Comida
+CREATE TABLE Comida (
+    IdComida INT AUTO_INCREMENT PRIMARY KEY,
+    Nombre VARCHAR(50),
+    Tipo_ataque VARCHAR(50),
+    Descripcion TEXT,
+    Nivel INT,
+    Efecto TEXT,
+    Resistencia INT,
+    Daño INT
+);
+
+-- Tabla Items
+CREATE TABLE Items (
+    IdItem INT AUTO_INCREMENT PRIMARY KEY,
+    Nombre VARCHAR(50),
+    Descripcion TEXT,
+    Simbolismo TEXT,
+    Ubicacion TEXT
+);
+
+-- Tabla Inventario
+CREATE TABLE Inventario (
+    IdInventario INT AUTO_INCREMENT PRIMARY KEY,
+    IdPersona INT,
+    Llaves INT DEFAULT 0,
+    IdComida INT,
+    Fragmentos INT DEFAULT 0,
+    FOREIGN KEY (IdPersona) REFERENCES Personas(Id),
+    FOREIGN KEY (IdComida) REFERENCES Comida(IdComida)
+);
+
+
+INSERT INTO Personas (Id, Correo, Usuario, Contraseña, Rol) VALUES
+(1, 'Emmanuel', 'Ronemma', 'esronpineda@emilianisomascos.edu.gt', 'Usuario');
+
+INSERT INTO Armas (IdArmas, Nombre, Tipo, Descripcion, Efecto, Composicion) VALUES
+(1, 'Dichiri', 'Golpe Dulce', 'Metales de los conosistemas condensados', 'Reduce un 20% del nivel + 22% energía', 'Arma blanca metalizada, con un halo de sombra.'),
+(2, 'Zoniri', 'Golpe Dulce', 'Cono dulce de metal concentrado', 'Reduce un 20% del nivel + 22%', 'Arma blanca de diseño puntiagudo'),
+(3, 'Thesmi', 'Golpe Dulce', 'Metal dulce refinado', 'Reduce un 20% del nivel + 22% energía', 'Hoja de acero suave, que gira al chocar.'),
+(4, 'Naguri', 'Golpe Dulce', 'Hoja de acero dulce, que se afila con el viento', 'Reduce un 20% del nivel + 22% energía', 'Hoja de acero suave, que gira al chocar.'),
+(5, 'Monikuchi', 'Golpe Dulce', 'Hoja de acero dulce, que se afila con el viento', 'Reduce un 20% del nivel + 22% energía', 'Hoja de acero suave, que gira al chocar.');
+
+INSERT INTO Comida (IdComida, Nombre, Tipo_ataque, Descripcion, Nivel, Efecto, Resistencia, Daño) VALUES
+(1, 'Dichiri', 'Golpe Dulce', 'Recuerdo de uva', 1, '20% salud', 4, 2),
+(2, 'Zoniri', 'Golpe Dulce', 'Punto medio, uva', 2, '25% salud', 4, 4),
+(3, 'Thesmi', 'Golpe Dulce', 'Uva turbia', 3, '25% energía', 4, 2),
+(4, 'Naguri', 'Golpe Dulce', 'Fruta pura, fresa', 4, '25% energía', 5, 3),
+(5, 'Granchi', 'Golpe Dulce', 'Es un poquichu', 5, '25% energía', 5, 5),
+(6, 'Yoru no Nabe', 'Golpe Dulce', 'Los flecos pue', 6, '25% energía', 5, 5);
+
+
+INSERT INTO Items (IdItem, Nombre, Descripcion, Simbolismo, Ubicacion) VALUES
+(1, 'Yin Yang', 'Antiguo amuleto con una serpiente enrollada', 'Balance interior y exterior', 'Bosque Azul'),
+(2, 'Reloj del Juicio', 'Reloj sin manecillas con inscripciones antiguas', 'Control del tiempo y destino', 'Templo del Norte'),
+(3, 'Estrella Roja', 'Fragmento de estrella con energía latente', 'Poder oculto', 'Cráter Carmesí'),
+(4, 'Flor del Alba', 'Flor que solo florece al amanecer', 'Renacimiento y esperanza', 'Jardines de Isuma');
