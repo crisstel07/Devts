@@ -5,7 +5,9 @@ import devt.login.components.Message;
 import devt.login.components.PanelCover;
 import devt.login.components.PanelLoading;
 import devt.login.components.PanelLoginAndRegister;
+import devt.login.components.PanelVerifyCode;
 import devt.login.connection.DBConnection;
+import devt.login.model.ModelMessage;
 import devt.login.model.ModelUser;
 import devt.login.service.ServiceMail;
 import devt.login.service.ServiceUser;
@@ -33,6 +35,8 @@ public class LoginBase extends javax.swing.JFrame {
     private MigLayout layout; // Layout para posicionar dinámicamente el contenido
     private PanelCover cover; // PAnelCover que se desliza.
     private PanelLoading loading;
+    private PanelVerifyCode verifyCode;
+    
     private PanelLoginAndRegister loginAndRegister; // Panel del Login y Register
     private Animator animator; // Controlador de animaciones de Trident
     private boolean isLogin = false;
@@ -40,6 +44,7 @@ public class LoginBase extends javax.swing.JFrame {
     private final double coverSize = 45; // Porcentaje del ancho que ocupa el PanelCover
     private final double loginSize = 55;
     private final DecimalFormat df = new DecimalFormat("##0.###");
+    private ServiceUser service;
     
     public LoginBase() {
         initComponents();
@@ -64,7 +69,6 @@ public class LoginBase extends javax.swing.JFrame {
         };
                 
         loginAndRegister = new PanelLoginAndRegister(eventRegister);// Instancia del panel LoginAndRegister.
-       
         fondo.add(cover, "width 45%, pos 0al 0 n 100%");// Posicionamos el panel inicialmente a la izquierda
         fondo.add(loginAndRegister, "width 55%, pos 1al 0 n 100%");
         
@@ -74,8 +78,9 @@ public class LoginBase extends javax.swing.JFrame {
 
     // Método que contiene toda la lógica de animación y el listener del botón.
     private void init() {
- 
+        service = new ServiceUser();
         loading = new PanelLoading();
+        verifyCode = new PanelVerifyCode();
         TimingTarget target = new TimingTargetAdapter() { // Creacion de TimingTarget.
             @Override
             public void timingEvent(float fraction) {
@@ -127,7 +132,10 @@ public class LoginBase extends javax.swing.JFrame {
         animator.setAcceleration(0.5f);
         animator.setDeceleration(0.5f);
         animator.setResolution(0); //Para una animación fluida.
-         fondo.setLayer(loading, JLayeredPane.POPUP_LAYER);
+        fondo.setLayer(loading, JLayeredPane.POPUP_LAYER);
+        fondo.setLayer(verifyCode, JLayeredPane.POPUP_LAYER);
+        fondo.add(loading, "pos 0 0 100% 100%");
+        fondo.add(verifyCode, "pos 0 0 100% 100%");
         // Creaciòn de un evento desde el PanelCover que se dispara al presionar su botón
         cover.addEvent(new ActionListener() {
             @Override
@@ -137,15 +145,124 @@ public class LoginBase extends javax.swing.JFrame {
                 }
             }
         });
+         verifyCode.addEventButtonOK(new ActionListener() {
+    @Override
+    public void actionPerformed(ActionEvent ae) {
+        try {
+            ModelUser user = loginAndRegister.getUser();
+            String inputCode = verifyCode.getInputCode();
+            if (inputCode.equals(user.getVerifyCode())) {
+                service.insertUser(user);  // Solo aquí se inserta al usuario
+                showMessage(Message.MessageType.SUCCESS, "Registration successful");
+                verifyCode.setVisible(false);
+            } else {
+                showMessage(Message.MessageType.ERROR, "Incorrect verification code");
+            }
+        } catch (SQLException e) {
+            showMessage(Message.MessageType.ERROR, "Error saving user");
+            e.printStackTrace();
+        }
     }
+});
+    }
+    
 
-    private void register() {
-        ModelUser user = loginAndRegister.getUser();
-        // loading.setVisible(true);
-        showMessage(Message.MessageType.ERROR, "Test Message");
+   private void register() {
+    ModelUser user = loginAndRegister.getUser();
+    try {
+        if (service.checkDuplicateUser(user.getnombre_usuario())) {
+            showMessage(Message.MessageType.ERROR, "User name already exists");
+        } else if (service.checkDuplicateEmail(user.getcorreo())) {
+            showMessage(Message.MessageType.ERROR, "Email already exists");
+        } else {
+            String code = service.generateCode();
+            user.setVerifyCode(code);
+            sendMain(user); // Envía correo
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();  // <- Esto imprimirá la traza completa del error
+        showMessage(Message.MessageType.ERROR, "Error Register");
     }
-    
-    
+}
+
+
+     private void sendMain(ModelUser user) {
+    new Thread(new Runnable() {
+        @Override
+        public void run() {
+            try {
+                loading.setVisible(true);
+                ModelMessage ms = new ServiceMail().sendMain(user.getcorreo(), user.getVerifyCode());
+                if (ms.isSuccess()) {
+                    loading.setVisible(false);
+                    verifyCode.setVisible(true);
+                } else {
+                    loading.setVisible(false);
+                    showMessage(Message.MessageType.ERROR, ms.getMessage());
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace(); // Imprime cualquier excepción en el envío
+                loading.setVisible(false);
+                showMessage(Message.MessageType.ERROR, "Error sending mail");
+            }
+        }
+    }).start();
+}
+
+    private void showMessage(Message.MessageType messageType, String message) {
+        Message ms = new Message();
+        ms.showMessage(messageType, message);
+        TimingTarget target = new TimingTargetAdapter() {
+            @Override
+            public void begin() {
+                if (!ms.isShow()) {
+                    fondo.add(ms, "pos 0.5al -30", 0); //  Insert to bg fist index 0
+                    ms.setVisible(true);
+                    fondo.repaint();
+                }
+            }
+     @Override
+            public void timingEvent(float fraction) {
+                float f;
+                if (ms.isShow()) {
+                    f = 40 * (1f - fraction);
+                } else {
+                    f = 40 * fraction;
+                }
+                layout.setComponentConstraints(ms, "pos 0.5al " + (int) (f - 30));
+                fondo.repaint();
+                fondo.revalidate();
+            }
+
+            @Override
+            public void end() {
+                if (ms.isShow()) {
+                    fondo.remove(ms);
+                    fondo.repaint();
+                    fondo.revalidate();
+                } else {
+                    ms.setShow(true);
+                }
+            }  
+            
+            };
+        Animator animator = new Animator(300, target);
+        animator.setResolution(0);
+        animator.setAcceleration(0.5f);
+        animator.setDeceleration(0.5f);
+        animator.start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(2000);
+                    animator.start();
+                } catch (InterruptedException e) {
+                    System.err.println(e);
+                }
+            }
+        }).start();
+    }
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -218,20 +335,17 @@ public class LoginBase extends javax.swing.JFrame {
         });
     }
 
-    private void showMessage(Message.MessageType messageType, String test_Message) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
-    }
-
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables
 }
 
-class FondoPanel extends JPanel {
+class FondoPanel extends JLayeredPane {
 
     private Image imagen;
 
     @Override
     public void paint(Graphics g) {
+         super.paintComponent(g); // Muy importante: llamar primero al método padre
         imagen = new ImageIcon(getClass().getResource("/devt/login/images/guzz_1.png")).getImage();
         g.drawImage(imagen, 0, 0, getWidth(), getHeight(), this);
         setOpaque(false);

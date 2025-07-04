@@ -2,6 +2,7 @@
 package devt.login.connection;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class DBConnection {
@@ -17,7 +18,11 @@ public class DBConnection {
     }
 
     private DBConnection() {
-
+         try {
+            connectToDatabase(); // ✅ Asegura la conexión apenas se crea la instancia
+        } catch (SQLException e) {
+            System.out.println("Error al conectar con la base de datos: " + e.getMessage());
+        }
     }
 
     public void connectToDatabase() throws SQLException {
@@ -26,7 +31,7 @@ public class DBConnection {
         String database = "VEILWALKER";
         String userName = "root";
         String password = "123456789";
-        connection = java.sql.DriverManager.getConnection("jdbc:mysql://" + server + ":" + port + "/" + database, userName, password);
+        connection = java.sql.DriverManager.getConnection("jdbc:mysql://" + server + ":" + port + "/" + database + "?serverTimezone=UTC",  userName, password);
     }
 
     public Connection getConnection() {

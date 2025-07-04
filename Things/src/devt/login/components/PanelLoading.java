@@ -12,7 +12,7 @@ public class PanelLoading extends javax.swing.JPanel {
    
     public PanelLoading() {
         initComponents();
-          setOpaque(false);
+        setOpaque(false);
         setFocusCycleRoot(true);
         setVisible(false);
         setFocusable(true);

@@ -19,8 +19,15 @@ import net.miginfocom.swing.MigLayout;
 public class PanelLoginAndRegister extends javax.swing.JLayeredPane {
 
     private ModelUser user;
+    private MyTextField txtUser;
+    private MyTextField txtEmail;
+    private MyPasswordField txtPass;
+
     public ModelUser getUser() {
-        return user;
+        String userName = txtUser.getText().trim();
+        String email    = txtEmail.getText().trim();
+    String password = String.valueOf(txtPass.getPassword());
+    return new ModelUser(0, userName, email, password);
     }  
      
     public PanelLoginAndRegister(ActionListener eventRegister) {
@@ -47,22 +54,24 @@ public class PanelLoginAndRegister extends javax.swing.JLayeredPane {
         label.setFont(new Font("sansserif", 1, 30));
         label.setForeground(new Color(68,148,125));
         register.add(label);
-        MyTextField txtUser = new  MyTextField();
+        
+        txtUser = new MyTextField();
         txtUser.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/user.png")));
         txtUser.setHint("Nombre");
         register.add(txtUser, "w 60%");
         
         //Email
-        MyTextField txtEmail = new MyTextField();
+        txtEmail = new MyTextField();
         txtEmail.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/mail.png")));
         txtEmail.setHint("Email");
         register.add(txtEmail, "w 60%");
         
         //Password
-        MyPasswordField txtPass = new MyPasswordField();
+        txtPass = new MyPasswordField();
         txtPass.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/pass.png")));
         txtPass.setHint("Contraseña");
         register.add(txtPass, "w 60%");
+        
         Button cmd = new Button();
         cmd.setBackground(new Color(68,148,125));
         cmd.setForeground(new Color(250, 250, 250));

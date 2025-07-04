@@ -8,6 +8,7 @@ import java.awt.Graphics2D;
 import javax.swing.ImageIcon;
 
 public class Message extends javax.swing.JPanel {
+
      public boolean isShow() {
         return show;
     }
@@ -27,11 +28,11 @@ public class Message extends javax.swing.JPanel {
 
     public void showMessage(MessageType messageType, String message) {
         this.messageType = messageType;
-        lbMessage.setText(message);
+        lblMessage.setText(message);
         if (messageType == MessageType.SUCCESS) {
-            lbMessage.setIcon(new ImageIcon(getClass().getResource("/com/raven/icon/success.png")));
+            lblMessage.setIcon(new ImageIcon(getClass().getResource("/devt/login/images/success.png")));
         } else {
-            lbMessage.setIcon(new ImageIcon(getClass().getResource("/com/raven/icon/error.png")));
+            lblMessage.setIcon(new ImageIcon(getClass().getResource("/devt/login/images/error.png")));
         }
     }
 
@@ -39,29 +40,27 @@ public class Message extends javax.swing.JPanel {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        lbMessage = new javax.swing.JLabel();
+        lblMessage = new javax.swing.JLabel();
 
-        lbMessage.setFont(new java.awt.Font("sansserif", 0, 14)); // NOI18N
-        lbMessage.setForeground(new java.awt.Color(248, 248, 248));
-        lbMessage.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        lbMessage.setText("Message");
+        lblMessage.setFont(new java.awt.Font("Segoe UI Emoji", 0, 14)); // NOI18N
+        lblMessage.setForeground(new java.awt.Color(255, 255, 255));
+        lblMessage.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        lblMessage.setText("Message");
+        lblMessage.setPreferredSize(new java.awt.Dimension(300, 30));
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(lbMessage, javax.swing.GroupLayout.DEFAULT_SIZE, 238, Short.MAX_VALUE)
-                .addContainerGap())
+            .addComponent(lblMessage, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(lbMessage, javax.swing.GroupLayout.DEFAULT_SIZE, 30, Short.MAX_VALUE)
+            .addComponent(lblMessage, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
     }// </editor-fold>//GEN-END:initComponents
 
-    @Override
+     @Override
     protected void paintComponent(Graphics grphcs) {
         Graphics2D g2 = (Graphics2D) grphcs;
         if (messageType == MessageType.SUCCESS) {
@@ -82,7 +81,6 @@ public class Message extends javax.swing.JPanel {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JLabel lbMessage;
-    
-    
+    private javax.swing.JLabel lblMessage;
+    // End of variables declaration//GEN-END:variables
 }
