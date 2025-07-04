@@ -16,7 +16,7 @@ public class Message extends javax.swing.JPanel {
     public void setShow(boolean show) {
         this.show = show;
     }
-
+   
     private MessageType messageType = MessageType.SUCCESS;
     private boolean show;
 
