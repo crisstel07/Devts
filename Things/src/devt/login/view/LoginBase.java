@@ -7,21 +7,24 @@ import devt.login.components.PanelLoading;
 import devt.login.components.PanelLoginAndRegister;
 import devt.login.components.PanelVerifyCode;
 import devt.login.connection.DBConnection;
+import devt.login.model.ModelLogin;
 import devt.login.model.ModelMessage;
 import devt.login.model.ModelUser;
-import devt.login.service.ServiceMail;
 import devt.login.service.ServiceUser;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 import net.miginfocom.swing.MigLayout;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import javax.swing.*;
+
+// Importa tu clase ApiClient y su clase interna ApiResponse
+import devt.login.apiFlask.ApiClient;
+import devt.login.apiFlask.ApiClient.ApiResponse;
 
 // MigLayout para organizar componentes de manera facil.
 import net.miginfocom.swing.MigLayout;
@@ -31,24 +34,41 @@ import org.jdesktop.animation.timing.*;
 
 public class LoginBase extends javax.swing.JFrame {
 
-    private FondoPanel fondo; // Variable local para acceder desde cualquier metodo
+    private FondoPanel fondo; 
     private MigLayout layout; // Layout para posicionar dinámicamente el contenido
     private PanelCover cover; // PAnelCover que se desliza.
     private PanelLoading loading;
     private PanelVerifyCode verifyCode;
-    
+    private Integer currentRegisteredUserId;
+
     private PanelLoginAndRegister loginAndRegister; // Panel del Login y Register
     private Animator animator; // Controlador de animaciones de Trident
     private boolean isLogin;
     private final double addSize = 30;
     private final double coverSize = 45; // Porcentaje del ancho que ocupa el PanelCover
     private final double loginSize = 55;
-    private final DecimalFormat df = new DecimalFormat("##0.###", DecimalFormatSymbols.getInstance(Locale.US));    private ServiceUser service;
+    private final DecimalFormat df = new DecimalFormat("##0.###", DecimalFormatSymbols.getInstance(Locale.US));
+    private ServiceUser service;
 
     public LoginBase() {
+        // Estas ActionListeners deben estar aquí porque son parámetros del constructor de PanelLoginAndRegister
+        ActionListener eventRegister = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                register();
+            }
+        };
+        ActionListener eventLogin = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ae) {
+                login();
+            }
+        };
+
+        loginAndRegister = new PanelLoginAndRegister(eventRegister, eventLogin);
         initComponents();
 
-         //Se inicializa laa ventana.
+        //Se inicializa laa ventana.
         this.setSize(1365, 767); // Tamaño de la ventana
         this.setLocationRelativeTo(null);
         this.setResizable(false);
@@ -58,26 +78,19 @@ public class LoginBase extends javax.swing.JFrame {
         fondo = new FondoPanel();
         layout = new MigLayout("fill, insets 0"); // Aplicamos MigLayout al fondoPanel.
         fondo.setLayout(layout);
-        this.setContentPane(fondo); //Se establece como panel principal.
-        cover = new PanelCover(); // Instancia del panel que se moverá
-        ActionListener eventRegister = new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                register();
-            }
-        };
-                
-        loginAndRegister = new PanelLoginAndRegister(eventRegister);// Instancia del panel LoginAndRegister.
+        this.setContentPane(fondo); // Se establece como panel principal.
+        cover = new PanelCover(); // Inicializa PanelCover
+
+        // Añade los paneles inicializados al fondo
         fondo.add(cover, "width 45%, pos 0al 0 n 100%");// Posicionamos el panel inicialmente a la izquierda
         fondo.add(loginAndRegister, "width 55%, pos 1al 0 n 100%");
-        
-        init(); //Se inicializa el contenido visual del PanelCover
+
+        init(); //Se inicializa el contenido visual del PanelCover, para configurar el animador y otros escuchadores de eventos
 
     }
 
     // Método que contiene toda la lógica de animación y el listener del botón.
     private void init() {
-        service = new ServiceUser();
         loading = new PanelLoading();
         verifyCode = new PanelVerifyCode();
         TimingTarget target = new TimingTargetAdapter() { // Creacion de TimingTarget.
@@ -86,9 +99,9 @@ public class LoginBase extends javax.swing.JFrame {
                 double fractionCover = isLogin ? 1f - fraction : fraction;
                 double fractionLogin = isLogin ? fraction : 1f - fraction;
                 double size = coverSize;
-                if(fraction <= 0.5f){
+                if (fraction <= 0.5f) {
                     size += fraction * addSize;
-                }else{
+                } else {
                     size += addSize - fraction * addSize;
                 }
                 if (isLogin) {
@@ -111,9 +124,9 @@ public class LoginBase extends javax.swing.JFrame {
                 if (fraction >= 0.5f) {
                     loginAndRegister.showRegister(isLogin);
                 }
-                fractionCover = Double.valueOf(df.format(fractionCover ));
+                fractionCover = Double.valueOf(df.format(fractionCover));
                 fractionLogin = Double.valueOf(df.format(fractionLogin));
-                
+
                 layout.setComponentConstraints(cover, "width " + size + "%, pos " + fractionCover + "al 0 n 100%");
                 layout.setComponentConstraints(loginAndRegister, "width " + loginSize + "%, pos " + fractionLogin + "al 0 n 100%");
                 fondo.revalidate();
@@ -144,69 +157,169 @@ public class LoginBase extends javax.swing.JFrame {
                 }
             }
         });
-         verifyCode.addEventButtonOK(new ActionListener() {
-    @Override
-    public void actionPerformed(ActionEvent ae) {
-        try {
-            ModelUser user = loginAndRegister.getUser();
-            String inputCode = verifyCode.getInputCode();
-            if (inputCode.equals(user.getVerifyCode())) {
-                service.insertUser(user);  // Solo aquí se inserta al usuario
-                showMessage(Message.MessageType.SUCCESS, "Registration successful");
-                verifyCode.setVisible(false);
-            } else {
-                showMessage(Message.MessageType.ERROR, "Incorrect verification code");
-            }
-        } catch (SQLException e) {
-            showMessage(Message.MessageType.ERROR, "Error saving user");
-            e.printStackTrace();
-            
-        }
-    }
-});
-    }
-    
-
-   private void register() {
-    ModelUser user = loginAndRegister.getUser();
-    try {
-        if (service.checkDuplicateUser(user.getnombre_usuario())) {
-            showMessage(Message.MessageType.ERROR, "User name already exists");
-        } else if (service.checkDuplicateEmail(user.getcorreo())) {
-            showMessage(Message.MessageType.ERROR, "Email already exists");
-        } else {
-             service.insertUser(user); // Se inserta el usuario, y el 'user' ModelUser ahora tiene el ID y el VerifyCode
-            sendMain(user); // <--- Envía el correo usando el VerifyCode que ServiceUser.insertUser le asignó al objeto 'user'
-        }
-    } catch (SQLException e) {
-        showMessage(Message.MessageType.ERROR, "Error during registration");
-        e.printStackTrace(); // ¡MUY IMPORTANTE para ver errores de SQL en la consola!
-    }
-}
-
-
-     private void sendMain(ModelUser user) {
-    new Thread(new Runnable() {
-        @Override
-        public void run() {
-            try {
-                loading.setVisible(true);
-                ModelMessage ms = new ServiceMail().sendMain(user.getcorreo(), user.getVerifyCode());
-                if (ms.isSuccess()) {
-                    loading.setVisible(false);
-                    verifyCode.setVisible(true);
-                } else {
-                    loading.setVisible(false);
-                    showMessage(Message.MessageType.ERROR, ms.getMessage());
+        verifyCode.addEventButtonOK(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ae) {
+                // Necesitamos el user_id para la verificación con la API Flask
+                // currentRegisteredUserId debe haber sido guardado en el método register()
+                if (currentRegisteredUserId == null || currentRegisteredUserId == 0) {
+                    showMessage(Message.MessageType.ERROR, "No hay un usuario para verificar. Por favor, regístrate primero.");
+                    return;
                 }
-            } catch (Exception ex) {
-                ex.printStackTrace(); // Imprime cualquier excepción en el envío
-                loading.setVisible(false);
-                showMessage(Message.MessageType.ERROR, "Error sending mail");
+
+                String inputCode = verifyCode.getInputCode();
+                if (inputCode.isEmpty()) {
+                    showMessage(Message.MessageType.ERROR, "Ingresa el código de verificación.");
+                    return;
+                }
+                
+                System.out.println("Java: Intentando verificar con User ID: " + currentRegisteredUserId + " y Código: '" + inputCode + "'");
+                loading.setVisible(true); // Mostrar carga mientras se verifica
+
+                new SwingWorker<ApiClient.ApiResponse, Void>() {
+                    @Override
+                    protected ApiClient.ApiResponse doInBackground() throws Exception {
+                        // Llama al método verifyUser de tu ApiClient
+                        return ApiClient.verifyUser(currentRegisteredUserId, inputCode);
+                    }
+
+                    @Override
+                    protected void done() {
+                        loading.setVisible(false); // Ocultar carga
+
+                        try {
+                            ApiClient.ApiResponse result = get();
+                            if (result.success) {
+                                showMessage(Message.MessageType.SUCCESS, result.message + " ¡Ingresando!"); // Mensaje más amigable                        verifyCode.setVisible(false); // Ocultar el panel de verificación
+                                String usernameLoggedIn = result.user.get("nombre_usuario").getAsString();
+                                String emailLoggedIn = result.user.get("correo").getAsString();
+                                int userIdLoggedIn = result.user.get("id").getAsInt();
+                                ModelUser loggedInUser = new ModelUser(userIdLoggedIn, usernameLoggedIn, emailLoggedIn, "PASSWORD_NOT_NEEDED_HERE");
+
+                                dispose(); // Cerrar la ventana de Login
+                                ViewSystem.main(loggedInUser); // Navegar a la siguiente vista directamente                        
+                            } else {
+                                showMessage(Message.MessageType.ERROR, result.message);
+                            }
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                            showMessage(Message.MessageType.ERROR, "Error inesperado al verificar: " + ex.getMessage());
+                        }
+                    }
+                }.execute();
             }
+        });
+
+    }
+
+    private void register() {
+        // Obtener los datos del usuario desde el PanelLoginAndRegister
+        // El método getUser() de PanelLoginAndRegister ya hace esto, ¡muy bien!
+        ModelUser user = loginAndRegister.getUser();
+
+        // Validación básica
+        if (user.getnombre_usuario().isEmpty() || user.getcorreo().isEmpty() || user.getPassword().isEmpty()) {
+            showMessage(Message.MessageType.ERROR, "Por favor, llena todos los campos de registro.");
+            return;
         }
-    }).start();
-}
+
+        // Mostrar la animación de carga
+        loading.setVisible(true);
+
+        // Usar SwingWorker para la llamada a la API en segundo plano
+        new SwingWorker<ApiClient.ApiResponse, Void>() {
+            @Override
+            protected ApiClient.ApiResponse doInBackground() throws Exception {
+                // Llama al método registerUser de tu ApiClient
+                return ApiClient.registerUser(user.getnombre_usuario(), user.getcorreo(), user.getPassword());
+            }
+
+            @Override
+            protected void done() {
+                // Esto se ejecuta en el EDT (hilo de la UI)
+                loading.setVisible(false); // Ocultar la animación de carga
+
+                try {
+                    ApiClient.ApiResponse result = get(); // Obtener el resultado de la tarea en segundo plano
+
+                    if (result.success) {
+                        showMessage(Message.MessageType.SUCCESS, result.message);
+                        // Guardar el user_id retornado por la API Flask para la verificación
+                        currentRegisteredUserId = result.user_id;
+
+                        // Ahora, en lugar de enviar correo con ServiceMail, la API Flask ya lo hizo.
+                        // Solo necesitamos mostrar el panel de verificación.
+                       // verifyCode.setVisible(true);
+                       // notifica al usuario que puede iniciar sesión.  
+                       showMessage(Message.MessageType.SUCCESS, "Cuenta verificada. Ahora puedes iniciar sesión.");
+                        // Opcional: Puedes pasar el email al panel de verificación para mostrarlo
+                       // verifyCode.putClientProperty("userEmail", user.getcorreo());
+
+                    } else {
+                        showMessage(Message.MessageType.ERROR, result.message);
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace(); // Imprime el stack trace para depuración
+                    showMessage(Message.MessageType.ERROR, "Error inesperado al registrar: " + ex.getMessage());
+                }
+            }
+        }.execute(); // Inicia el SwingWorker
+    }
+
+    private void login() {
+        ModelLogin data = loginAndRegister.getDataLogin();
+
+        if (data.getEmail().isEmpty() || data.getPassword().isEmpty()) {
+            showMessage(Message.MessageType.ERROR, "Por favor, ingresa tu correo y contraseña.");
+            return;
+        }
+
+        loading.setVisible(true); // Mostrar la animación de carga
+
+        new SwingWorker<ApiClient.ApiResponse, Void>() {
+            @Override
+            protected ApiClient.ApiResponse doInBackground() throws Exception {
+                // Llama al método loginUser de tu ApiClient
+                return ApiClient.loginUser(data.getEmail(), data.getPassword());
+            }
+
+            @Override
+            protected void done() {
+                loading.setVisible(false); // Ocultar la animación de carga
+
+                try {
+                    ApiClient.ApiResponse result = get(); // Obtener el resultado
+                    if (result.success) {
+                        showMessage(Message.MessageType.SUCCESS, result.message);
+                        // Aquí, puedes acceder a los datos del usuario logueado
+                        // result.user es un JsonObject, puedes acceder a sus propiedades
+                        // Por ejemplo: String username = result.user.get("nombre_usuario").getAsString();
+                        // int userId = result.user.get("id").getAsInt();
+
+                        // ModelUser userLoggedIn = new ModelUser(userId, username, data.getCorreo(), data.getPassword());
+                        // ViewSystem.main(userLoggedIn); // Pasar los datos del usuario a la siguiente vista
+                        // Como tu ViewSystem.main() espera un ModelUser, tendrías que construirlo
+                        // con la información que viene en result.user.
+                        // Adaptamos result.user (JsonObject) a ModelUser
+                        String usernameLoggedIn = result.user.get("nombre_usuario").getAsString();
+                        String emailLoggedIn = result.user.get("correo").getAsString();
+                        int userIdLoggedIn = result.user.get("id").getAsInt();
+
+                        ModelUser loggedInUser = new ModelUser(userIdLoggedIn, usernameLoggedIn, emailLoggedIn, data.getPassword());
+
+                        dispose(); // Cerrar la ventana de Login
+                        ViewSystem.main(loggedInUser); // Navegar a la siguiente vista
+
+                    } else {
+                        showMessage(Message.MessageType.ERROR, result.message);
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    showMessage(Message.MessageType.ERROR, "Error inesperado al iniciar sesión: " + ex.getMessage());
+                }
+            }
+        }.execute();
+    }
 
     private void showMessage(Message.MessageType messageType, String message) {
         Message ms = new Message();
@@ -220,7 +333,8 @@ public class LoginBase extends javax.swing.JFrame {
                     fondo.repaint();
                 }
             }
-     @Override
+
+            @Override
             public void timingEvent(float fraction) {
                 float f;
                 if (ms.isShow()) {
@@ -242,9 +356,9 @@ public class LoginBase extends javax.swing.JFrame {
                 } else {
                     ms.setShow(true);
                 }
-            }  
-            
-            };
+            }
+
+        };
         Animator animator = new Animator(300, target);
         animator.setResolution(0);
         animator.setAcceleration(0.5f);
@@ -262,6 +376,7 @@ public class LoginBase extends javax.swing.JFrame {
             }
         }).start();
     }
+
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -300,7 +415,7 @@ public class LoginBase extends javax.swing.JFrame {
         //</editor-fold>
         //</editor-fold>
         /* Create and display the form */
-        
+
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
@@ -321,16 +436,16 @@ public class LoginBase extends javax.swing.JFrame {
 
         /* Create and display the form */
         try {
-             DBConnection.getInstance().connectToDatabase();
+            DBConnection.getInstance().connectToDatabase();
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        
+
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 new LoginBase().setVisible(true);
             }
-            
+
         });
     }
 
@@ -344,7 +459,7 @@ class FondoPanel extends JLayeredPane {
 
     @Override
     public void paint(Graphics g) {
-         super.paintComponent(g); // Muy importante: llamar primero al método padre
+        super.paintComponent(g); // Muy importante: llamar primero al método padre
         imagen = new ImageIcon(getClass().getResource("/devt/login/images/guzz_1.png")).getImage();
         g.drawImage(imagen, 0, 0, getWidth(), getHeight(), this);
         setOpaque(false);

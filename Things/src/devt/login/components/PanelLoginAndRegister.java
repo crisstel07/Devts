@@ -1,6 +1,7 @@
 
 package devt.login.components;
 //Dibuja elementos graficos como lineas, rectangulos, imagenes, etc.
+import devt.login.model.ModelLogin;
 import devt.login.model.ModelUser;
 import devt.login.swing.Button;
 import devt.login.swing.MyPasswordField;
@@ -18,24 +19,46 @@ import net.miginfocom.swing.MigLayout;
 
 public class PanelLoginAndRegister extends javax.swing.JLayeredPane {
 
+    
     private ModelUser user;
+    private ModelLogin DataLogin;
+    
     private MyTextField txtUser;
     private MyTextField txtEmail;
     private MyPasswordField txtPass;
 
+    private MyTextField txtLoginEmail;
+    private MyPasswordField txtLoginPass;
+    
     public ModelUser getUser() {
         String userName = txtUser.getText().trim();
-        String email    = txtEmail.getText().trim();
-    String password = String.valueOf(txtPass.getPassword());
-    return new ModelUser(0, userName, email, password);
-    }  
+        String email = txtEmail.getText().trim(); // Accede a la variable de instancia
+        String password = String.valueOf(txtPass.getPassword()); // Accede a la variable de instancia
+        return new ModelUser(0, userName, email, password);
+    }
+
+     public ModelLogin getDataLogin() {
+        // Asegúrate de que estas variables de instancia se asignen en initLogin
+        String email = txtLoginEmail.getText().trim();
+        String password = String.valueOf(txtLoginPass.getPassword());
+        return new ModelLogin(email, password);
+    }
      
-    public PanelLoginAndRegister(ActionListener eventRegister) {
+     public void setDataLogin(ModelLogin data) {
+    if (txtLoginEmail != null) {
+        txtLoginEmail.setText(data.getEmail());
+    }
+    if (txtLoginPass != null) {
+        txtLoginPass.setText(data.getPassword());
+    }
+}
+     
+    public PanelLoginAndRegister(ActionListener eventRegister,ActionListener eventLogin) {
         initComponents();
         setOpaque(false); // indica cuando un componet es trasnparente o no opaco.
          
         initRegister(eventRegister);
-        initLogin();
+        initLogin(eventLogin);
         login.setVisible(false);
         register.setVisible(true);
         
@@ -89,25 +112,30 @@ public class PanelLoginAndRegister extends javax.swing.JLayeredPane {
         });
     }
     
-    private void initLogin (){
+    
+    private void initLogin (ActionListener eventLogin){
      // Tutulo
      login.setLayout(new MigLayout("wrap", "push[center]push", "push[]25[]10[]10[]25[]push"));
      
-     //Ingreso  
-     JLabel label = new JLabel("Iniciar Sesión");
+     // Elementos de inicio de sesión
+        JLabel label = new JLabel("Iniciar Sesión");
         label.setFont(new Font("sansserif", 1, 30));
         label.setForeground(new Color(68,148,125));
         login.add(label);
-        MyTextField txtEmail = new MyTextField();
-        txtEmail.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/mail.png")));
-        txtEmail.setHint("Email");
-        login.add(txtEmail, "w 60%");
+        
+     //Ingreso  
+        // Asignar a las variables de INSTANCIA, no a las locales        
+        txtLoginEmail = new MyTextField(); // Corregido: Asignar a la variable de instancia
+        txtLoginEmail.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/mail.png")));
+        txtLoginEmail.setHint("Email");
+        login.add(txtLoginEmail, "w 60%");
         
         //Password
-        MyPasswordField txtPass = new MyPasswordField();
-        txtPass.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/pass.png")));
-        txtPass.setHint("Contraseña");
-        login.add(txtPass, "w 60%");
+       txtLoginPass = new MyPasswordField(); // Corregido: Asignar a la variable de instancia
+        txtLoginPass.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/pass.png")));
+        txtLoginPass.setHint("Contraseña");
+        login.add(txtLoginPass, "w 60%");
+        
         JButton cmdForget = new JButton("¿ Olvidaste tu contraseña ?");
         cmdForget.setForeground(new Color(100, 100, 100));
         cmdForget.setFont(new Font("sansserif", 1, 12));
@@ -120,8 +148,17 @@ public class PanelLoginAndRegister extends javax.swing.JLayeredPane {
         Button cmd = new Button();
         cmd.setBackground(new Color(68,148,125));
         cmd.setForeground(new Color(250, 250, 250));
+        cmd.addActionListener(eventLogin);
         cmd.setText("INICIAR SESIÓN");
         login.add(cmd, "w 40%, h 40");
+        /* cmd.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ae) {
+                // Ya no necesitas crear ModelLogin aquí, getDataLogin() lo hará.
+                // Pero si el ActionListener de cmd lo estaba haciendo, está bien,
+                // solo asegúrate de que txtLoginEmail y txtLoginPass sean de instancia.
+            }
+        });*/
         
     }
     

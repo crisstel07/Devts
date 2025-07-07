@@ -7,7 +7,7 @@ public class ModelMessage {
     private boolean success;
     private String message;
 
-    public boolean isSuccess() {
+      public boolean isSuccess() {
         return success;
     }
 
