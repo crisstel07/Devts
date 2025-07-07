@@ -109,8 +109,8 @@ private final int OFFSET_DIBUJO_ATAQUE_IZQUIERDA_X = -150;
             saltoAnim = new Animacion(cargarSprites("jump", 12), 10);
 
             // Ataque Normal (6 frames, rápido)
-            BufferedImage[] spritesAtaqueNormal = cargarSprites("attack", 8);
-            ataqueNormalAnim = new Animacion(spritesAtaqueNormal, 7);
+            BufferedImage[] spritesAtaqueNormal = cargarSprites("attack", 7);
+            ataqueNormalAnim = new Animacion(spritesAtaqueNormal, 4);
             anchoAtaqueNormal = spritesAtaqueNormal[0].getWidth();
             altoAtaqueNormal = spritesAtaqueNormal[0].getHeight();
 

@@ -34,14 +34,14 @@ public class PanelJuego extends JPanel implements Runnable {
     private Jugador jugador;
     private Mouse mouse;
     private Teclado teclado;
-    private java.util.List<EnemigoBase> enemigos;
     private java.util.List<AtaqueHitbox> hitboxesDeAtaque = new ArrayList<>();
 
-    
     //HItbox
     private boolean mostrarHitboxes = false;
 
-    
+    //Particulas
+    private java.util.List<ParticulasGolpe> particulasGolpe = new ArrayList<>();
+
     //CONSTRUCTOR
     public PanelJuego() {
         this.setPreferredSize(new Dimension(ANCHO, ALTO));
@@ -54,12 +54,8 @@ public class PanelJuego extends JPanel implements Runnable {
         teclado = new Teclado();
 
         niveles = new ArrayList<>();
-        niveles.add(new Dia(2));
-        niveles.add(new NocheOjos(2));
-
-        enemigos = new ArrayList<>();
-        enemigos.add(new EnemigoBasico(1000, PanelJuego.ALTO - 150 - 100, jugador));  // Suelo - alto del enemigo
-        enemigos.add(new EnemigoBasico(2000, PanelJuego.ALTO - 150 - 100, jugador));
+        niveles.add(new Noche(2, jugador));
+        niveles.add(new NocheOjos(2, jugador));
 
         nivelActual = 0;
         escenario = niveles.get(nivelActual);
@@ -69,14 +65,12 @@ public class PanelJuego extends JPanel implements Runnable {
         this.addKeyListener(teclado);
     }
 
-    
     //INICAR EL JUEGO
     public void iniciarJuego() {
         gameThread = new Thread(this);
         gameThread.start();
     }
 
-    
     //METODO RUN 
     @Override
     public void run() {
@@ -98,7 +92,6 @@ public class PanelJuego extends JPanel implements Runnable {
         }
     }
 
-    
     //MANEJAR TRANSICIONES 
     private void iniciarTransicion() {
         if (nivelActual + 1 < niveles.size()) {
@@ -111,104 +104,117 @@ public class PanelJuego extends JPanel implements Runnable {
         }
     }
 
-    
     // Actualizar lógica del juego
-  public void actualizar() {
-    // ✅ Actualizar jugador (siempre se actualiza para movimiento, gravedad, etc.)
-    jugador.actualizar(
-            teclado.izquierda, teclado.derecha, teclado.arriba, teclado.abajo,
-            mouse.atacar, teclado.saltar,
-            anchoEscenario + 300 // Permite salir 300 px fuera
-    );
+    public void actualizar() {
 
-    // ✅ Manejar transiciones de nivel (fade in/out)
-    if (enTransicion) {
-        if (faseFadeOut) {
-            opacidadTransicion += 2;
-            if (opacidadTransicion >= 255) {
-                opacidadTransicion = 255;
+        // ✅ Actualizar jugador (siempre se actualiza para movimiento, gravedad, etc.)
+        jugador.actualizar(
+                teclado.izquierda, teclado.derecha, teclado.arriba, teclado.abajo,
+                mouse.atacar, teclado.saltar,
+                anchoEscenario + 300 // Permite salir 300 px fuera
+        );
 
-                nivelActual++;
-                escenario = proximoEscenario;
-                anchoEscenario = escenario.getAnchoTotal();
-                jugador.resetearPosicion();
-                escenario.reproducirMusica();
-                faseFadeOut = false;
+        // ✅ Manejar transiciones de nivel (fade in/out)
+        if (enTransicion) {
+            if (faseFadeOut) {
+                opacidadTransicion += 2;
+                if (opacidadTransicion >= 255) {
+                    opacidadTransicion = 255;
+
+                    nivelActual++;
+                    escenario = proximoEscenario;
+                    anchoEscenario = escenario.getAnchoTotal();
+                    jugador.resetearPosicion();
+                    escenario.reproducirMusica();
+                    faseFadeOut = false;
+                    camaraX = 0;
+                }
+            } else {
+                opacidadTransicion -= 2;
+                if (opacidadTransicion <= 0) {
+                    opacidadTransicion = 0;
+                    enTransicion = false;
+                }
             }
+            return; // Durante transición negra, no procesamos nada más
+        }
+
+        // ✅ Ajustar cámara
+        int mitadPantalla = ANCHO / 2;
+        int jugadorX = jugador.getX();
+        if (jugadorX < mitadPantalla) {
+            camaraX = 0;
+        } else if (jugadorX <= anchoEscenario - mitadPantalla) {
+            camaraX = jugadorX - mitadPantalla;
         } else {
-            opacidadTransicion -= 2;
-            if (opacidadTransicion <= 0) {
-                opacidadTransicion = 0;
-                enTransicion = false;
+            camaraX = anchoEscenario - ANCHO;
+        }
+
+        // ✅ Checar si el jugador llegó al final del escenario
+        if (jugador.getX() >= anchoEscenario + 100) {
+            iniciarTransicion();
+        }
+
+        // ✅ Actualizar enemigos y checar colisión con jugador
+        for (EnemigoBase enemigo : escenario.getEnemigos()) {
+            if (enemigo.estaVivo()) {
+                escenario.actualizarEnemigos();
+
+                // ✔️ Daño al jugador solo si no está atacando ni invulnerable
+                if (enemigo.getRect().intersects(jugador.getRect()) && !jugador.esInvulnerable()) {
+                    int direccionEmpuje = (enemigo.getVelocidadX() > 0) ? 40 : -40;
+                    jugador.recibirDaño(1, direccionEmpuje);
+
+                }
             }
         }
-        return; // Durante transición negra, no procesamos nada más
-    }
 
-    // ✅ Ajustar cámara
-    int mitadPantalla = ANCHO / 2;
-    int jugadorX = jugador.getX();
-    if (jugadorX < mitadPantalla) {
-        camaraX = 0;
-    } else if (jugadorX <= anchoEscenario - mitadPantalla) {
-        camaraX = jugadorX - mitadPantalla;
-    } else {
-        camaraX = anchoEscenario - ANCHO;
-    }
+        // ✅ Generar nueva hitbox de ataque si corresponde
+        jugador.generarHitboxAtaque(hitboxesDeAtaque);
 
-    // ✅ Checar si el jugador llegó al final del escenario
-    if (jugador.getX() >= anchoEscenario + 100) {
-        iniciarTransicion();
-    }
-
-    // ✅ Actualizar enemigos y checar colisión con jugador
-    for (EnemigoBase enemigo : enemigos) {
-        if (enemigo.estaVivo()) {
-            enemigo.actualizar();
-
-            // ✔️ Daño al jugador solo si no está atacando ni invulnerable
-           if (enemigo.getRect().intersects(jugador.getRect()) && !jugador.estaAtacando() && !jugador.esInvulnerable()) {
-    int direccionEmpuje = (enemigo.getVelocidadX() > 0) ? 30 : -30;
-    jugador.recibirDaño(1, direccionEmpuje);
-}
-        }
-    }
-
-    // ✅ Generar nueva hitbox de ataque si corresponde
-    jugador.generarHitboxAtaque(hitboxesDeAtaque);
-
-    // ✅ Daño directo al enemigo por cuerpo a cuerpo mientras atacas
-    if (jugador.estaAtacando()) {
-        for (EnemigoBase enemigo : enemigos) {
-            if (enemigo.estaVivo() && jugador.getRect().intersects(enemigo.getRect())) {
-                enemigo.recibirDano(1);
+        // ✅ Daño directo al enemigo por cuerpo a cuerpo mientras atacas
+        if (jugador.estaAtacando()) {
+            for (EnemigoBase enemigo : escenario.getEnemigos()) {
+                if (enemigo.estaVivo() && jugador.getRect().intersects(enemigo.getRect())) {
+                    enemigo.recibirDano(1);
+                    System.out.println("Generé partícula en: " + enemigo.getX() + "," + enemigo.getY());
+                    particulasGolpe.add(new ParticulasGolpe(enemigo.getX(), enemigo.getY()));
+                }
             }
         }
-    }
 
-    // ✅ Actualizar y limpiar hitboxes expiradas
-    for (int i = hitboxesDeAtaque.size() - 1; i >= 0; i--) {
-        AtaqueHitbox hb = hitboxesDeAtaque.get(i);
-        hb.actualizar();
-        if (!hb.estaActiva()) {
-            hitboxesDeAtaque.remove(i);
-        }
-    }
-
-    // ✅ Aplicar daño a enemigos que colisionan con hitboxes activas
-    for (EnemigoBase enemigo : enemigos) {
-        if (!enemigo.estaVivo()) continue;
-        for (AtaqueHitbox hb : hitboxesDeAtaque) {
-            if (hb.getRect().intersects(enemigo.getRect())) {
-                enemigo.recibirDano(1);
+        // ✅ Actualizar y limpiar hitboxes expiradas
+        for (int i = hitboxesDeAtaque.size() - 1; i >= 0; i--) {
+            AtaqueHitbox hb = hitboxesDeAtaque.get(i);
+            hb.actualizar();
+            if (!hb.estaActiva()) {
+                hitboxesDeAtaque.remove(i);
             }
         }
+
+        // ✅ Aplicar daño a enemigos que colisionan con hitboxes activas
+        for (EnemigoBase enemigo : escenario.getEnemigos()) {
+            if (!enemigo.estaVivo()) {
+                continue;
+            }
+            for (AtaqueHitbox hb : hitboxesDeAtaque) {
+                if (hb.getRect().intersects(enemigo.getRect())) {
+                    enemigo.recibirDano(1);
+                }
+            }
+        }
+
+        for (int i = particulasGolpe.size() - 1; i >= 0; i--) {
+            ParticulasGolpe p = particulasGolpe.get(i);
+            p.actualizar();
+            if (!p.estaViva()) {
+                particulasGolpe.remove(i);
+            }
+        }
+
+        // ✅ Manejar mostrar hitboxes
+        mostrarHitboxes = teclado.mostrarHitbox;
     }
-
-    // ✅ Manejar mostrar hitboxes
-    mostrarHitboxes = teclado.mostrarHitbox;
-}
-
 
     // -----------------------------------------------------------------
     // DIBUJAR 
@@ -218,44 +224,45 @@ public class PanelJuego extends JPanel implements Runnable {
         int camaraX = this.camaraX;
 
         escenario.dibujarFondo(g, camaraX, ANCHO, ALTO);
+
         jugador.dibujar(g, camaraX);
+        for (ParticulasGolpe p : particulasGolpe) {
+            p.dibujar(g, camaraX);
+        }
         escenario.dibujarElementos(g, camaraX);
-       
 
         if (enTransicion) {
             Graphics2D g2 = (Graphics2D) g;
             g2.setColor(new Color(0, 0, 0, opacidadTransicion));
             g2.fillRect(0, 0, ANCHO, ALTO);
         }
-        
-        for (EnemigoBase enemigo : enemigos) {
-    if (enemigo.estaVivo()) {
-        enemigo.dibujar(g, camaraX);
-    }
-}
-        if (mostrarHitboxes) {
-    // HITBOX DEL JUGADOR
-    Graphics2D g2d = (Graphics2D) g;
-    g2d.setColor(Color.RED);
-    Rectangle rJugador = jugador.getRect();
-    g2d.drawRect(rJugador.x - camaraX, rJugador.y, rJugador.width, rJugador.height);
 
-    // HITBOX DE ENEMIGOS
-    g2d.setColor(Color.BLUE);
-    for (EnemigoBase enemigo : enemigos) {
-        if (enemigo.estaVivo()) {
-            Rectangle rEnemigo = enemigo.getRect();
-            g2d.drawRect(rEnemigo.x - camaraX, rEnemigo.y, rEnemigo.width, rEnemigo.height);
-            
-             
+        escenario.dibujarEnemigos(g, camaraX);
+
+        for (ParticulasGolpe p : particulasGolpe) {
+            p.dibujar(g, camaraX);
         }
-        for (AtaqueHitbox hb : hitboxesDeAtaque) {
-    hb.dibujar(g, camaraX);
-    }
-   
-}
-}
-        
-        
+        if (mostrarHitboxes) {
+            // HITBOX DEL JUGADOR
+            Graphics2D g2d = (Graphics2D) g;
+            g2d.setColor(Color.RED);
+            Rectangle rJugador = jugador.getRect();
+            g2d.drawRect(rJugador.x - camaraX, rJugador.y, rJugador.width, rJugador.height);
+
+            // HITBOX DE ENEMIGOS
+            g2d.setColor(Color.BLUE);
+            for (EnemigoBase enemigo : escenario.getEnemigos()) {
+                if (enemigo.estaVivo()) {
+                    Rectangle rEnemigo = enemigo.getRect();
+                    g2d.drawRect(rEnemigo.x - camaraX, rEnemigo.y, rEnemigo.width, rEnemigo.height);
+
+                }
+
+            }
+            for (AtaqueHitbox hb : hitboxesDeAtaque) {
+                hb.dibujar(g, camaraX);
+            }
+        }
+
     }
 }

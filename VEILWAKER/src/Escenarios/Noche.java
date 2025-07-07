@@ -1,28 +1,36 @@
 package Escenarios;
 
-import Main.Jugador;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import Main.Jugador;
+import Enemigos.Darker;
 
-// Clase NocheOjos
-public class NocheOjos extends EscenarioBase {
+public class Noche extends EscenarioBase {
     private BufferedImage fondo;
     private Suelo suelo;
     private int repeticionesInternas;
+    private Jugador jugador;
 
-    public NocheOjos(int repeticiones, Jugador jugado) {
+    public Noche(int repeticiones, Jugador jugador) {
         this.repeticiones = repeticiones;
         this.repeticionesInternas = repeticiones;
+        this.jugador = jugador;
+
         try {
-            fondo = ImageIO.read(getClass().getResource("/Graficos/FondoTren2.png"));
+            fondo = ImageIO.read(getClass().getResource("/Graficos/FondoNoche.png"));
             anchoFondo = fondo.getWidth();
             altoFondo = fondo.getHeight();
         } catch (IOException e) {
             e.printStackTrace();
         }
         suelo = new Suelo("/Graficos/suelo.png");
+
+        // 👇️ Aquí defines los enemigos SOLO de este escenario
+        enemigos.add(new Darker(1100, 617, jugador));
+        enemigos.add(new Darker(2000, 617, jugador));
+        enemigos.add(new Darker(3000, 617, jugador));
     }
 
     @Override
@@ -36,10 +44,11 @@ public class NocheOjos extends EscenarioBase {
     @Override
     public void dibujarElementos(Graphics g, int camaraX) {
         suelo.dibujar(g, camaraX);
+        
     }
 
     @Override
     public void reproducirMusica() {
-        System.out.println("Reproduciendo música de NocheOjos...");
+        System.out.println("Reproduciendo música de Noche...");
     }
 }

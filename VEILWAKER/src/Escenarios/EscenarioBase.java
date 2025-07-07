@@ -1,6 +1,9 @@
 package Escenarios;
-import Main.Suelo;
-import java.awt.*;
+
+import Enemigos.EnemigoBase;
+import java.awt.Graphics;
+import java.util.List;
+import java.util.ArrayList;
 
 public abstract class EscenarioBase {
 
@@ -9,31 +12,35 @@ public abstract class EscenarioBase {
     protected int altoFondo;
     protected Suelo suelo;
 
-    /**
-     * El ancho total del escenario, importante para la cámara y límites del jugador.
-     */
+    protected List<EnemigoBase> enemigos = new ArrayList<>();
+
+    public List<EnemigoBase> getEnemigos() {
+        return enemigos;
+    }
+
     public int getAnchoTotal() {
         return repeticiones * anchoFondo;
     }
 
-    /**
-     * Método que dibuja el fondo del escenario
-     */
     public abstract void dibujarFondo(Graphics g, int camaraX, int anchoVentana, int altoVentana);
 
-    /**
-     * Método para dibujar suelo, plataformas, enemigos, etc.
-     */
     public abstract void dibujarElementos(Graphics g, int camaraX);
 
-    public Suelo getSuelo() {
-        return suelo;
-    }
-    
-    
-    /**
-     * Método para reproducir música de fondo (opcional)
-     */
     public abstract void reproducirMusica();
 
+    public void actualizarEnemigos() {
+        for (EnemigoBase enemigo : enemigos) {
+            if (enemigo.estaVivo()) {
+                enemigo.actualizar();
+            }
+        }
+    }
+
+    public void dibujarEnemigos(Graphics g, int camaraX) {
+        for (EnemigoBase enemigo : enemigos) {
+            if (enemigo.estaVivo()) {
+                enemigo.dibujar(g, camaraX);
+            }
+        }
+    }
 }
