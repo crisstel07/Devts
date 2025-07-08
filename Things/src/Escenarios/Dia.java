@@ -5,7 +5,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import Main.Jugador;
-import Enemigos.Darker;
+import Enemigos.*;
 
 public class Dia extends EscenarioBase {
     private BufferedImage fondo;
@@ -28,7 +28,7 @@ public class Dia extends EscenarioBase {
         suelo = new Suelo("/Graficos/SueloDia.png");
 
         // 👇️ Aquí defines los enemigos SOLO de este escenario
-        enemigos.add(new Darker(1100, 617, jugador));
+        enemigos.add(new Fargano(1100, 617, jugador));
         enemigos.add(new Darker(2000, 617, jugador));
         enemigos.add(new Darker(3000, 617, jugador));
     }
