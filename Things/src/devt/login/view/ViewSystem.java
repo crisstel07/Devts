@@ -1,64 +1,117 @@
 
 package devt.login.view;
 
-import devt.login.model.ModelUser;
-import java.awt.Color;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import java.awt.*;
+import java.awt.event.ActionListener;
+import com.google.gson.JsonObject;
+import java.awt.event.ActionEvent;
 
-public class ViewSystem extends javax.swing.JFrame {
+public class ViewSystem extends JPanel { // <-- Extiende JPanel, no JFrame
 
-     private final ModelUser user;
-     
-    public ViewSystem(ModelUser user) {
-        initComponents();
-         this.user = user;
-        initComponents();
-        getContentPane().setBackground(new Color(255, 255, 255));
-        System.out.println("Bienvenido a ViewSystem, " + user.getnombre_usuario());
-    }
+    private JsonObject loggedInUserData;
+    private JsonObject currentCharacterData;
 
-   
-    @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
-    private void initComponents() {
+    private JButton btnPlay;
+    private JButton btnProfile;
+    private JButton btnSettings;
+    private JButton btnLogout;
 
-        lblUser = new javax.swing.JLabel();
+    private ActionListener profileButtonListener;
+    private ActionListener logoutButtonListener;
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+    public ViewSystem(JsonObject userData, JsonObject characterData) {
+        this.loggedInUserData = userData;
+        this.currentCharacterData = characterData;
+        
+        setLayout(new GridBagLayout()); // Usa GridBagLayout para un diseño flexible
+        setBackground(new Color(15, 15, 15)); // Fondo oscuro
+        setBorder(new EmptyBorder(50, 50, 50, 50)); // Padding alrededor del panel
 
-        lblUser.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
-        lblUser.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        lblUser.setText("Nombre de Usuario");
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(15, 15, 15, 15); // Espaciado entre componentes
+        gbc.gridx = 0; // Columna 0
+        gbc.gridy = 0; // Fila 0
+        gbc.fill = GridBagConstraints.HORIZONTAL; // Rellena horizontalmente
+        gbc.anchor = GridBagConstraints.CENTER; // Centra los componentes
 
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGap(115, 115, 115)
-                .addComponent(lblUser, javax.swing.GroupLayout.PREFERRED_SIZE, 344, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(269, Short.MAX_VALUE))
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGap(252, 252, 252)
-                .addComponent(lblUser, javax.swing.GroupLayout.PREFERRED_SIZE, 93, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(281, Short.MAX_VALUE))
-        );
+        // Etiqueta de bienvenida
+        JLabel welcomeLabel = new JLabel("¡Bienvenido, " + currentCharacterData.get("nombre_personaje").getAsString() + "!");
+        welcomeLabel.setFont(new Font("Arial", Font.BOLD, 48));
+        welcomeLabel.setForeground(new Color(255, 215, 0)); // Color dorado
+        gbc.gridwidth = 1; // Ocupa 1 columna
+        add(welcomeLabel, gbc);
 
-        pack();
-        setLocationRelativeTo(null);
-    }// </editor-fold>//GEN-END:initComponents
-  
-    public static void main(ModelUser user) {
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new ViewSystem(user).setVisible(true);
+        gbc.gridy++; // Pasa a la siguiente fila
+        gbc.ipadx = 50; // Padding interno horizontal
+        gbc.ipady = 20; // Padding interno vertical
+        
+        Font buttonFont = new Font("Arial", Font.BOLD, 24);
+        Color buttonBg = new Color(50, 100, 150); // Color de fondo de los botones
+        Color buttonFg = Color.WHITE; // Color del texto de los botones
+
+        // Botón "Jugar"
+        btnPlay = new JButton("Jugar");
+        btnPlay.setFont(buttonFont);
+        btnPlay.setBackground(buttonBg);
+        btnPlay.setForeground(buttonFg);
+        btnPlay.setFocusPainted(false); // Quita el borde de foco
+        btnPlay.addActionListener(e -> JOptionPane.showMessageDialog(this, "¡Iniciando el juego!", "Jugar", JOptionPane.INFORMATION_MESSAGE));
+        add(btnPlay, gbc);
+
+        gbc.gridy++; // Siguiente fila
+        // Botón "Perfil"
+        btnProfile = new JButton("Perfil");
+        btnProfile.setFont(buttonFont);
+        btnProfile.setBackground(buttonBg);
+        btnProfile.setForeground(buttonFg);
+        btnProfile.setFocusPainted(false);
+        btnProfile.addActionListener(e -> {
+            if (profileButtonListener != null) {
+                profileButtonListener.actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "showProfile"));
             }
         });
+        add(btnProfile, gbc);
+
+        gbc.gridy++; // Siguiente fila
+        // Botón "Configuraciones"
+        btnSettings = new JButton("Configuraciones");
+        btnSettings.setFont(buttonFont);
+        btnSettings.setBackground(buttonBg);
+        btnSettings.setForeground(buttonFg);
+        btnSettings.setFocusPainted(false);
+        btnSettings.addActionListener(e -> JOptionPane.showMessageDialog(this, "Abriendo Configuraciones...", "Configuraciones", JOptionPane.INFORMATION_MESSAGE));
+        add(btnSettings, gbc);
+
+        gbc.gridy++; // Siguiente fila
+        // Botón "Cerrar Sesión" (con estilo diferente)
+        btnLogout = new JButton("Cerrar Sesión");
+        btnLogout.setFont(new Font("Arial", Font.BOLD, 20));
+        btnLogout.setBackground(new Color(150, 50, 50)); // Rojo
+        btnLogout.setForeground(Color.WHITE);
+        btnLogout.setFocusPainted(false);
+        btnLogout.addActionListener(e -> {
+            if (logoutButtonListener != null) {
+                logoutButtonListener.actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "logout"));
+            }
+        });
+        add(btnLogout, gbc);
     }
 
-    // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JLabel lblUser;
-    // End of variables declaration//GEN-END:variables
+    /**
+     * Añade un ActionListener al botón de Perfil.
+     * @param listener El ActionListener a añadir.
+     */
+    public void addProfileButtonListener(ActionListener listener) {
+        this.profileButtonListener = listener;
+    }
+
+    /**
+     * Añade un ActionListener al botón de Cerrar Sesión.
+     * @param listener El ActionListener a añadir.
+     */
+    public void addLogoutButtonListener(ActionListener listener) {
+        this.logoutButtonListener = listener;
+    }
 }
