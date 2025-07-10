@@ -5,61 +5,56 @@ import java.awt.image.BufferedImage;
 public class Animacion {
     private BufferedImage[] frames;
     private int frameActual;
-    private int velocidad; // frames para cambiar
+    private int velocidad;
     private int contador;
+    private boolean loop;
 
-    /**
-     * Constructor
-     * @param frames Arreglo de imágenes para la animación
-     * @param velocidad Velocidad de animación (menor = más rápido)
-     */
-    public Animacion(BufferedImage[] frames, int velocidad) {
+    public Animacion(BufferedImage[] frames, int velocidad, boolean loop) {
         this.frames = frames;
         this.velocidad = velocidad;
+        this.loop = loop;
         this.frameActual = 0;
         this.contador = 0;
     }
 
-    /**
-     * Actualiza el frame de la animación
-     */
     public void actualizar() {
+        if (estaTerminada() && !loop) return;
+
         contador++;
         if (contador >= velocidad) {
-            frameActual = (frameActual + 1) % frames.length;
             contador = 0;
+            frameActual++;
+
+            if (loop) {
+                frameActual %= frames.length;
+            } else if (frameActual >= frames.length) {
+                frameActual = frames.length - 1; // Se queda en el último frame
+            }
         }
     }
 
-    /**
-     * Reinicia la animación (para ataques, saltos, etc.)
-     */
     public void reiniciar() {
         frameActual = 0;
         contador = 0;
     }
 
-    /**
-     * Devuelve el frame actual para dibujar
-     * @return BufferedImage del frame actual
-     */
     public BufferedImage getFrameActual() {
         return frames[frameActual];
     }
 
-    /**
-     * Saber si terminó (para ataques)
-     */
     public boolean estaTerminada() {
-        return frameActual == frames.length - 1;
+        return frameActual == frames.length - 1 && contador == 0;
     }
-    
-    public int getFrameActualIndex() {
-    return frameActual;
-}
-    
-    public int getCantidadFrames() {
-    return frames.length;
-}
 
+    public int getFrameActualIndex() {
+        return frameActual;
+    }
+
+    public int getCantidadFrames() {
+        return frames.length;
+    }
+
+    public int getDuracionEnFrames() {
+        return frames.length * velocidad;
+    }
 }

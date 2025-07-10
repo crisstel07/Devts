@@ -28,6 +28,7 @@ public class Dia extends EscenarioBase {
         suelo = new Suelo("/Graficos/SueloDia.png");
 
         // 👇️ Aquí defines los enemigos SOLO de este escenario
+         enemigos.add( new Fargano(1000, 617, jugador, this));
         enemigos.add(new Darker(2000, 617, jugador));
         enemigos.add(new Darker(3000, 617, jugador));
     }

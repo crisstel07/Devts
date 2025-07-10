@@ -158,11 +158,15 @@ public class PanelJuego extends JPanel implements Runnable {
         }
 
        escenario.actualizarEnemigos(); // ✅ primero actualiza
+       // ✅ Resolver empuje entre jugador y enemigos
+for (EnemigoBase enemigo : escenario.getEnemigos()) {
+    resolverEmpuje(jugador, enemigo);
+}
 
 for (EnemigoBase enemigo : escenario.getEnemigos()) {
     if (enemigo.estaVivo() && enemigo.getRect().intersects(jugador.getRect()) && !jugador.esInvulnerable()) {
         int direccionEmpuje = (enemigo.getVelocidadX() > 0) ? 40 : -40;
-       if (enemigo instanceof Farg) {
+       if (enemigo instanceof Fargo) {
     jugador.recibirDaño(2, direccionEmpuje);
 } else {
     jugador.recibirDaño(1, direccionEmpuje);
@@ -225,6 +229,31 @@ for (EnemigoBase enemigo : escenario.getEnemigos()) {
         // ✅ Manejar mostrar hitboxes
         mostrarHitboxes = teclado.mostrarHitbox;
     }
+    
+    private void resolverEmpuje(Jugador jugador, EnemigoBase enemigo) {
+    Rectangle jugadorRect = jugador.getRect();
+    Rectangle enemigoRect = enemigo.getRect();
+
+    if (!jugadorRect.intersects(enemigoRect)) return;
+
+    int overlapX = Math.min(
+        jugadorRect.x + jugadorRect.width - enemigoRect.x,
+        enemigoRect.x + enemigoRect.width - jugadorRect.x
+    );
+
+    if (overlapX <= 0) return;
+
+    // Separar a ambos a la mitad
+    if (jugador.getX() < enemigo.getX()) {
+        jugador.moverX(-overlapX / 2);
+        enemigo.moverX(+overlapX / 2);
+    } else {
+        jugador.moverX(+overlapX / 2);
+        enemigo.moverX(-overlapX / 2);
+    }
+}
+
+
 
     // -----------------------------------------------------------------
     // DIBUJAR 

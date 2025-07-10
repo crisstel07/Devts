@@ -37,6 +37,11 @@ public abstract class EnemigoBase {
     public Rectangle getRect() {
         return new Rectangle(x, y, ancho, alto);
     }
+    
+    public void moverX(int dx) {
+    x += dx;
+}
+    
 
     public int getX() {
         return x;

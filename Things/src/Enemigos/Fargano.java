@@ -46,9 +46,9 @@ public class Fargano extends EnemigoBase {
         this.escenario = escenario;
 
         try {
-            animIdle = new Animacion(cargarSprites("idle", 2), 60);
-            animAtaque = new Animacion(cargarSprites("Attack", 9), 8);
-            animMuerte = new Animacion(cargarSprites("Muerte", 11), 12);
+            animIdle = new Animacion(cargarSprites("idle", 2), 60, true);
+            animAtaque = new Animacion(cargarSprites("Attack", 9), 8, true);
+            animMuerte = new Animacion(cargarSprites("Muerte", 11), 12, false);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -139,7 +139,7 @@ public class Fargano extends EnemigoBase {
 
     private void generarFarg() {
         // Ajusta la posición si quieres
-        Farg nuevoFarg = new Farg(this.x + 50, this.y, jugador, escenario);
+        Fargo nuevoFarg = new Fargo(this.x + 50, this.y, jugador, escenario);
         escenario.agregarEnemigo(nuevoFarg);
     }
 

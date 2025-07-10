@@ -61,10 +61,10 @@ private boolean estaMuriendo = false;
 
     private void cargarAnimaciones() {
         try {
-            animIdle = new Animacion(cargarSprites("idle", 2), 200);
-            animGenerar = new Animacion(cargarSprites("generation", 8), 16);
-            animCaminar = new Animacion(cargarSprites("avanzar", 6), 24);
-            animacionMuerte = new Animacion(cargarSprites("muerte", 12), 10);  // Usa tus propios nombres y cantidad de frames
+            animIdle = new Animacion(cargarSprites("idle", 2), 200, true);
+            animGenerar = new Animacion(cargarSprites("generation", 8), 16, false);
+            animCaminar = new Animacion(cargarSprites("avanzar", 6), 24, true);
+            animacionMuerte = new Animacion(cargarSprites("muerte", 12), 10, false);  // Usa tus propios nombres y cantidad de frames
 
         } catch (IOException e) {
             e.printStackTrace();

@@ -18,10 +18,10 @@ public class BalaFargano {
 private final int anchoDibujo = 64; // Cambia a lo que desees (ej. 64 píxeles de ancho)
 private final int altoDibujo = 64;  // Alto del sprite dibujado
 
-private final int offsetXSprite = -10; // Corrección horizontal si el sprite está desalineado
+private final int offsetXSprite = +60; // Corrección horizontal si el sprite está desalineado
 private final int offsetYSprite = -10; // Corrección vertical si quieres subir o bajar el sprite
 
-
+private final int offsetX = 60;
     
     
 
@@ -36,7 +36,7 @@ private final int offsetYSprite = -10; // Corrección vertical si quieres subir 
         this.jugador = jugador;
         
          try {
-            animavance = new Animacion(cargarSprites("Bala", 5), 15);
+            animavance = new Animacion(cargarSprites("Bala", 5), 15, false);
             
         } catch (Exception e) {
             e.printStackTrace();
@@ -78,7 +78,7 @@ private final int offsetYSprite = -10; // Corrección vertical si quieres subir 
     }
     
     public Rectangle getRect() {
-    return new Rectangle(x, y, 50, 30);
+    return new Rectangle(x+offsetX, y, 50, 30);
 }
 
 }
