@@ -4,48 +4,51 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import Main.Jugador;
 import Main.Animacion;
+import java.util.ArrayList;
 import java.util.List;
+import Escenarios.*;
 
 public class Fargano extends EnemigoBase {
 
-    private int offsetXSprite = -120;
-    private int offsetYSprite = 0;
-    
+    private EscenarioBase escenario;
+    private Jugador jugador;
+
     private final int RETROCESO_PIXELES = 30;
-
-
-    // Estados del enemigo
-    public enum Estado {
-        IDLE, ATACANDO, MUERTO
-    }
-
-    private Estado estado = Estado.IDLE;
-
-    private final int RADIO_DETECCION = 300;
-
+    private final int RADIO_DETECCION = 500;
     private int vida = 5;
 
-    // Invulnerabilidad
     private boolean invulnerable = false;
     private int tiempoInvulnerable = 0;
-    private final int DURACION_INVULNERABLE = 90; // 1.5 segundos si tu juego va a 60fps
+    private final int DURACION_INVULNERABLE = 60; // 1.5 segundos si el juego va a 60fps
 
-    // Animaciones
+    private boolean fargGenerado = false;
+    private boolean yaDisparoEnEsteAtaque = false;
+
     private Animacion animIdle;
     private Animacion animAtaque;
     private Animacion animMuerte;
 
-    private Jugador jugador;
+    private Estado estado = Estado.IDLE;
 
-    // Constructor
-    public Fargano(int x, int y, Jugador jugador) {
-        super(x, y, 100);  // Tamaño base (puedes ajustar)
+    private List<BalaFargano> balas = new ArrayList<>();
+
+    // Desplazamiento para dibujar sprite
+    private int offsetXSprite = -120;
+    private int offsetYSprite = 0;
+
+    public enum Estado {
+        IDLE, ATACANDO, MUERTO
+    }
+
+    public Fargano(int x, int y, Jugador jugador, EscenarioBase escenario) {
+        super(x, y, 100);
         this.jugador = jugador;
+        this.escenario = escenario;
 
         try {
             animIdle = new Animacion(cargarSprites("idle", 2), 60);
-            animAtaque = new Animacion(cargarSprites("Attack", 9), 24);
-            animMuerte = new Animacion(cargarSprites("Muerte", 11), 26);
+            animAtaque = new Animacion(cargarSprites("Attack", 9), 8);
+            animMuerte = new Animacion(cargarSprites("Muerte", 11), 12);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -55,7 +58,7 @@ public class Fargano extends EnemigoBase {
         BufferedImage[] frames = new BufferedImage[cantidad];
         for (int i = 0; i < cantidad; i++) {
             frames[i] = javax.imageio.ImageIO.read(
-                    getClass().getResourceAsStream("/Graficos/Sprites/Enemigos/Fargano/" + baseNombre + "_" + i + ".png")
+                getClass().getResourceAsStream("/Graficos/Sprites/Enemigos/Fargano/" + baseNombre + "_" + i + ".png")
             );
         }
         return frames;
@@ -63,15 +66,22 @@ public class Fargano extends EnemigoBase {
 
     @Override
     public void actualizar() {
-        if (!vivo) {
-            return;
-        }
+        if (!vivo) return;
 
         if (estado == Estado.MUERTO) {
             animMuerte.actualizar();
+
+            // Aquí generamos al Farg mientras está la animación de muerte
+            if (!fargGenerado && animMuerte.getFrameActualIndex() >= animMuerte.getCantidadFrames() / 2) {
+                generarFarg();
+                fargGenerado = true;
+            }
+
+            // Cuando termina la animación marcamos muerto
             if (animMuerte.estaTerminada()) {
                 vivo = false;
             }
+
             return;
         }
 
@@ -85,28 +95,59 @@ public class Fargano extends EnemigoBase {
 
         int distanciaX = Math.abs(jugador.getX() - this.x);
 
-        // Cambiar a estado ataque si el jugador está cerca
         if (estado == Estado.IDLE && distanciaX < RADIO_DETECCION) {
             estado = Estado.ATACANDO;
         }
 
-        // Actualizar animación del estado actual
         switch (estado) {
-            case IDLE ->
-                animIdle.actualizar();
-            case ATACANDO ->
+            case IDLE -> animIdle.actualizar();
+            case ATACANDO -> {
                 animAtaque.actualizar();
+
+                // Dispara en el último frame
+                if (!yaDisparoEnEsteAtaque && animAtaque.getFrameActualIndex() == animAtaque.getCantidadFrames() - 1) {
+                    disparar();
+                    yaDisparoEnEsteAtaque = true;
+                }
+
+                if (animAtaque.estaTerminada()) {
+                    animAtaque.reiniciar();
+                    yaDisparoEnEsteAtaque = false;
+                    estado = Estado.IDLE;
+                }
+            }
         }
+
+        // Actualizar balas
+        for (int i = 0; i < balas.size(); i++) {
+            BalaFargano b = balas.get(i);
+            b.actualizar();
+            if (!b.isActiva()) {
+                balas.remove(i);
+                i--;
+            }
+        }
+    }
+
+    public void disparar() {
+        int direccion = jugador.getX() >= this.x ? 1 : -1;
+        int xBala = this.x + (direccion == 1 ? 100 : -100);
+        int yBala = this.y - 130;
+
+        balas.add(new BalaFargano(xBala, yBala, direccion, jugador));
+    }
+
+    private void generarFarg() {
+        // Ajusta la posición si quieres
+        Farg nuevoFarg = new Farg(this.x + 50, this.y, jugador, escenario);
+        escenario.agregarEnemigo(nuevoFarg);
     }
 
     @Override
     public void recibirDano(int cantidad, int direccionEmpuje) {
-        if (invulnerable || estado == Estado.MUERTO) {
-            return;
-        }
-        
-           // Retroceso
-    x += direccionEmpuje +RETROCESO_PIXELES;
+        if (invulnerable || estado == Estado.MUERTO) return;
+
+        x += direccionEmpuje + RETROCESO_PIXELES;
         vida -= cantidad;
         invulnerable = true;
         tiempoInvulnerable = DURACION_INVULNERABLE;
@@ -119,36 +160,31 @@ public class Fargano extends EnemigoBase {
 
     @Override
     public void dibujar(Graphics g, int camaraX) {
+        if (!vivo) return;
 
-        if (!vivo) {
-            return;
-        }
-
-        BufferedImage frame = null;
-
-        switch (estado) {
-            case IDLE ->
-                frame = animIdle.getFrameActual();
-            case ATACANDO ->
-                frame = animAtaque.getFrameActual();
-            case MUERTO ->
-                frame = animMuerte.getFrameActual();
-        }
+        BufferedImage frame = switch (estado) {
+            case IDLE -> animIdle.getFrameActual();
+            case ATACANDO -> animAtaque.getFrameActual();
+            case MUERTO -> animMuerte.getFrameActual();
+        };
 
         if (frame != null) {
             int escalaAncho = 270;
             int escalaAlto = 300;
 
             g.drawImage(
-                    frame,
-                    x - camaraX + offsetXSprite, // ⬅️ Desplazamiento en X
-                    y - escalaAlto + offsetYSprite, // ⬅️ Desplazamiento en Y
-                    escalaAncho,
-                    escalaAlto,
-                    null
+                frame,
+                x - camaraX + offsetXSprite,
+                y - escalaAlto + offsetYSprite,
+                escalaAncho,
+                escalaAlto,
+                null
             );
         }
 
+        for (BalaFargano b : balas) {
+            b.dibujar(g, camaraX);
+        }
     }
 
     @Override
@@ -159,5 +195,9 @@ public class Fargano extends EnemigoBase {
     @Override
     public int getVelocidadX() {
         return 0;
+    }
+
+    public List<BalaFargano> getBalas() {
+        return balas;
     }
 }

@@ -5,7 +5,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import Main.Jugador;
-import Enemigos.Darker;
+import Enemigos.*;
 
 public class Noche extends EscenarioBase {
     private BufferedImage fondo;
@@ -28,7 +28,7 @@ public class Noche extends EscenarioBase {
         suelo = new Suelo("/Graficos/SueloNoche.png");
 
         // 👇️ Aquí defines los enemigos SOLO de este escenario
-        enemigos.add(new Darker(1100, 617, jugador));
+         enemigos.add( new Fargano(1000, 617, jugador, this));
         enemigos.add(new Darker(2000, 617, jugador));
         enemigos.add(new Darker(3000, 617, jugador));
     }

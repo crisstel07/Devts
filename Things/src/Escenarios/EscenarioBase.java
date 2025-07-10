@@ -12,10 +12,13 @@ public abstract class EscenarioBase {
     protected int altoFondo;
     protected Suelo suelo;
 
-    protected List<EnemigoBase> enemigos = new ArrayList<>();
+    protected  final List<EnemigoBase> enemigos = new ArrayList<>();
+    private List<EnemigoBase> enemigosPendientes = new ArrayList<>();
 
     public List<EnemigoBase> getEnemigos() {
-        return enemigos;
+    synchronized (enemigos) {
+        return new ArrayList<>(enemigos);
+    }
     }
 
     public int getAnchoTotal() {
@@ -27,20 +30,35 @@ public abstract class EscenarioBase {
     public abstract void dibujarElementos(Graphics g, int camaraX);
 
     public abstract void reproducirMusica();
+    
+    public void agregarEnemigo(EnemigoBase enemigo) {
+    enemigosPendientes.add(enemigo);
+}
+
 
     public void actualizarEnemigos() {
+   synchronized (enemigos) {
+        // Actualizar existentes
         for (EnemigoBase enemigo : enemigos) {
             if (enemigo.estaVivo()) {
                 enemigo.actualizar();
             }
         }
+
+        // Agregar los nuevos
+        enemigos.addAll(enemigosPendientes);
+        enemigosPendientes.clear();
+    }
+   enemigos.removeIf(e -> !e.estaVivo());
     }
 
     public void dibujarEnemigos(Graphics g, int camaraX) {
+        synchronized (enemigos) {
         for (EnemigoBase enemigo : enemigos) {
             if (enemigo.estaVivo()) {
                 enemigo.dibujar(g, camaraX);
             }
         }
     }
+}
 }

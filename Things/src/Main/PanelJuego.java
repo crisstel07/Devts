@@ -157,19 +157,19 @@ public class PanelJuego extends JPanel implements Runnable {
             iniciarTransicion();
         }
 
-        // ✅ Actualizar enemigos y checar colisión con jugador
-        for (EnemigoBase enemigo : escenario.getEnemigos()) {
-            if (enemigo.estaVivo()) {
-                escenario.actualizarEnemigos();
+       escenario.actualizarEnemigos(); // ✅ primero actualiza
 
-                // ✔️ Daño al jugador solo si no está atacando ni invulnerable
-                if (enemigo.getRect().intersects(jugador.getRect()) && !jugador.esInvulnerable()) {
-                    int direccionEmpuje = (enemigo.getVelocidadX() > 0) ? 40 : -40;
-                    jugador.recibirDaño(1, direccionEmpuje);
+for (EnemigoBase enemigo : escenario.getEnemigos()) {
+    if (enemigo.estaVivo() && enemigo.getRect().intersects(jugador.getRect()) && !jugador.esInvulnerable()) {
+        int direccionEmpuje = (enemigo.getVelocidadX() > 0) ? 40 : -40;
+       if (enemigo instanceof Farg) {
+    jugador.recibirDaño(2, direccionEmpuje);
+} else {
+    jugador.recibirDaño(1, direccionEmpuje);
+}
+    }
+}
 
-                }
-            }
-        }
 
         // ✅ Generar nueva hitbox de ataque si corresponde
         jugador.generarHitboxAtaque(hitboxesDeAtaque);
@@ -201,7 +201,7 @@ public class PanelJuego extends JPanel implements Runnable {
             }
             for (AtaqueHitbox hb : hitboxesDeAtaque) {
                 if (hb.getRect().intersects(enemigo.getRect())) {
-                     int direccionEmpuje = (jugador.getX() < enemigo.getX()) ? +50 : -50;
+                    int direccionEmpuje = (jugador.getX() < enemigo.getX()) ? +50 : -50;
                     // Calculamos el centro del enemigo para ubicar la partícula
                     int offsetVertical = -200;
                     int centroX = enemigo.getX() + enemigo.getAncho() / 2 - ParticulasGolpe.PARTICULA_ANCHO / 2;
@@ -262,13 +262,25 @@ public class PanelJuego extends JPanel implements Runnable {
                 if (enemigo.estaVivo()) {
                     Rectangle rEnemigo = enemigo.getRect();
                     g2d.drawRect(rEnemigo.x - camaraX, rEnemigo.y, rEnemigo.width, rEnemigo.height);
-
                 }
-
             }
             for (AtaqueHitbox hb : hitboxesDeAtaque) {
                 hb.dibujar(g, camaraX);
             }
+            // HITBOX BALAS FARGANO
+            g2d.setColor(Color.ORANGE);
+            for (EnemigoBase enemigo : escenario.getEnemigos()) {
+                if (enemigo instanceof Fargano) {
+                    Fargano fargano = (Fargano) enemigo;
+                    for (BalaFargano b : fargano.getBalas()) {
+                        if (b.isActiva()) {
+                            Rectangle rBala = b.getRect();
+                            g2d.drawRect(rBala.x - camaraX, rBala.y, rBala.width, rBala.height);
+                        }
+                    }
+                }
+            }
+
         }
 
     }

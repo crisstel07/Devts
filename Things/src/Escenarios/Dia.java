@@ -28,7 +28,6 @@ public class Dia extends EscenarioBase {
         suelo = new Suelo("/Graficos/SueloDia.png");
 
         // 👇️ Aquí defines los enemigos SOLO de este escenario
-        enemigos.add(new Fargano(1100, 617, jugador));
         enemigos.add(new Darker(2000, 617, jugador));
         enemigos.add(new Darker(3000, 617, jugador));
     }
@@ -51,4 +50,6 @@ public class Dia extends EscenarioBase {
     public void reproducirMusica() {
         System.out.println("Reproduciendo música de Noche...");
     }
+    
+    
 }

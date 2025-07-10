@@ -57,4 +57,9 @@ public class Animacion {
     public int getFrameActualIndex() {
     return frameActual;
 }
+    
+    public int getCantidadFrames() {
+    return frames.length;
+}
+
 }

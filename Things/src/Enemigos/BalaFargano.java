@@ -1,5 +1,6 @@
 package Enemigos;
 
+import Main.Animacion;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import Main.Jugador;
@@ -10,9 +11,23 @@ public class BalaFargano {
     private int velocidadX = 8;
     private int direccion; // -1 o 1
     private boolean activa = true;
+    
+    //Hitbox tamaño
+    
+
+private final int anchoDibujo = 64; // Cambia a lo que desees (ej. 64 píxeles de ancho)
+private final int altoDibujo = 64;  // Alto del sprite dibujado
+
+private final int offsetXSprite = -10; // Corrección horizontal si el sprite está desalineado
+private final int offsetYSprite = -10; // Corrección vertical si quieres subir o bajar el sprite
+
+
+    
+    
 
     private Jugador jugador;
     private BufferedImage sprite; // Carga tu sprite
+    private  Animacion animavance;
 
     public BalaFargano(int x, int y, int direccion, Jugador jugador) {
         this.x = x;
@@ -20,7 +35,21 @@ public class BalaFargano {
         this.direccion = direccion;
         this.jugador = jugador;
         
-        
+         try {
+            animavance = new Animacion(cargarSprites("Bala", 5), 15);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+      private BufferedImage[] cargarSprites(String baseNombre, int cantidad) throws Exception {
+        BufferedImage[] frames = new BufferedImage[cantidad];
+        for (int i = 0; i < cantidad; i++) {
+            frames[i] = javax.imageio.ImageIO.read(
+                    getClass().getResourceAsStream("/Graficos/Sprites/Enemigos/Fargano/" + baseNombre + "_" + i + ".png")
+            );
+        }
+        return frames;
     }
 
     public void actualizar() {
@@ -37,10 +66,19 @@ public class BalaFargano {
 
     public void dibujar(Graphics g, int camaraX) {
         if (!activa) return;
-        g.drawImage(sprite, x - camaraX, y, null);
+        animavance.actualizar();
+      BufferedImage frame = animavance.getFrameActual();
+      g.drawImage(frame, x - camaraX + offsetXSprite, y + offsetYSprite, anchoDibujo, altoDibujo, null);
+
+      
     }
 
     public boolean isActiva() {
         return activa;
     }
+    
+    public Rectangle getRect() {
+    return new Rectangle(x, y, 50, 30);
+}
+
 }
