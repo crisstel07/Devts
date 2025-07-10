@@ -1,5 +1,5 @@
-
 package devt.login.apiFlask;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -188,55 +188,13 @@ public class ApiClient {
     }
 
     /**
-     * Obtiene el perfil completo de un usuario por su ID.
-     * Esto es útil para recargar los datos del usuario (no del personaje) después de ciertas operaciones.
-     * @param userId El ID del usuario.
-     * @return Un objeto ApiResponse que contiene los datos del usuario en el campo 'user'.
-     */
-    public static ApiResponse getUserProfile(int userId) { // <-- ¡ESTE ES EL NUEVO MÉTODO QUE DEBES TENER!
-        try {
-            URL url = new URL(API_BASE_URL + "user/" + userId); // Asume que tienes un endpoint /api/user/<id> en Flask
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Accept", "application/json");
-
-            int responseCode = conn.getResponseCode();
-            StringBuilder response = new StringBuilder();
-            
-            InputStreamReader isr;
-            if (responseCode >= 200 && responseCode < 300) {
-                isr = new InputStreamReader(conn.getInputStream(), "utf-8");
-            } else {
-                isr = new InputStreamReader(conn.getErrorStream(), "utf-8");
-            }
-
-            try (BufferedReader br = new BufferedReader(isr)) {
-                String responseLine = null;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
-                }
-            }
-
-            System.out.println("Respuesta del servidor /user/" + userId + " (" + responseCode + "): " + response.toString());
-            ApiResponse apiResponse = gson.fromJson(response.toString(), ApiResponse.class);
-            return apiResponse;
-
-        } catch (Exception e) {
-            System.err.println("Error al obtener perfil de usuario: " + e.getMessage());
-            ApiResponse errorResponse = new ApiResponse();
-            errorResponse.success = false;
-            errorResponse.message = "Error de conexión o de red al cargar perfil de usuario: " + e.getMessage();
-            return errorResponse;
-        }
-    }
-
-    /**
      * Obtiene el perfil de un personaje o lo crea si no existe para el user_id dado.
      * @param userId ID del usuario al que pertenece el personaje.
      * @return ApiResponse con los datos del personaje.
      */
     public static ApiResponse getOrCreateCharacterProfile(int userId) {
         try {
+            // Esta URL debe coincidir con tu API Flask: /api/profile/<user_id>
             URL url = new URL(API_BASE_URL + "profile/" + userId);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
