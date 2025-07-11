@@ -28,8 +28,11 @@ public class Jugador {
         CAMINANDO_IZQUIERDA,
         SALTANDO,
         ATERRIZANDO,
-        DAÑADO
+        DAÑADO,
+        MUERTO,
+        RENACIENDO
     }
+
     private Estado estado = Estado.IDLE;
 
     private boolean mirandoDerecha = true;
@@ -40,9 +43,12 @@ public class Jugador {
     private int vida = 5;
     private boolean invulnerable = false;
     private int timerInvulnerable = 0;
-    
+
     private int fasesLunares = 1;  // empieza en vacía
-private final int FASES_LUNARES_MAX = 5;
+    private final int FASES_LUNARES_MAX = 5;
+
+    private boolean cargandoCuracion = false;
+    private Animacion curacionAnim;
 
     // ================================
 // 3.5 SPRITES HUD
@@ -53,7 +59,6 @@ private final int FASES_LUNARES_MAX = 5;
     private BufferedImage[] gatosRecuperarSprites;
 
 // Estados
-
     private int vidas = 5;
 
     private Animacion gatosIdleAnim;
@@ -104,6 +109,11 @@ private final int FASES_LUNARES_MAX = 5;
     private final int OFFSET_DIBUJO_ATAQUE_IZQUIERDA_X = -150;
     private final int OFFSET_DIBUJO_ATAQUE_Y = +5;
 
+    //Offsets de curación
+    private int curacionAncho = ANCHO;
+    private int curacionAlto = ALTO;
+    private int curacionOffsetX = 0;
+    private int curacionOffsetY = -4;
     // ============================================================
     // 🟣 7. ANIMACIONES DE MOVIMIENTO Y DAÑO
     // ============================================================
@@ -111,12 +121,12 @@ private final int FASES_LUNARES_MAX = 5;
     private Animacion caminarAnim;
     private Animacion saltoAnim;
     private Animacion danoAnim;
+    private Animacion muerteAnim;
+    private Animacion renacerAnim;
 
     // ============================================================
 // 🟣 7.5 FASES LUNARES
 // ============================================================
-   
-  
     private final int VIDA_MAXIMA = 5;
 
     // ============================================================
@@ -126,11 +136,11 @@ private final int FASES_LUNARES_MAX = 5;
         x = 50;
         y = SUELO_Y;
         cargarAnimaciones();
-       try {
-        cargarHUDSprites();
-    } catch (IOException e) {
-        e.printStackTrace();
-    }
+        try {
+            cargarHUDSprites();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     // ============================================================
@@ -140,12 +150,16 @@ private final int FASES_LUNARES_MAX = 5;
         try {
             idleAnim = new Animacion(cargarSprites("idle", 4), 50, true);
             caminarAnim = new Animacion(cargarSprites("walk", 9), 8, true);
-            saltoAnim = new Animacion(cargarSprites("jump", 12), 10, true);
+            saltoAnim = new Animacion(cargarSprites("jump", 12), 10, false);
 
             ataqueNormalAnim = new Animacion(cargarSprites("attack", 7), 4, false);
             ataqueArribaAnim = new Animacion(cargarSprites("Ataquearriba", 5), 4, false);
             ataqueAbajoAnim = new Animacion(cargarSprites("ataqueabajo", 4), 4, false);
             danoAnim = new Animacion(cargarSprites("Dano", 21), 3, false);
+            muerteAnim = new Animacion(cargarSprites("MuerteRe", 16), 6, false);
+            curacionAnim = new Animacion(cargarSprites("CurarsePerso", 11), 6, false);
+            renacerAnim = new Animacion(cargarSprites("Renacer", 10), 5, false);
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -158,33 +172,31 @@ private final int FASES_LUNARES_MAX = 5;
         }
         return sprites;
     }
-    
-    
+
     private void cargarHUDSprites() throws IOException {
-    // FASES LUNARES
-    fasesLunaresSprites = new BufferedImage[5];
-    for (int i = 0; i < 5; i++) {
-        fasesLunaresSprites[i] = ImageIO.read(getClass().getResource("/Graficos/Sprites/Hud/cargaSuper_" + i + ".png"));
+        // FASES LUNARES
+        fasesLunaresSprites = new BufferedImage[5];
+        for (int i = 0; i < 5; i++) {
+            fasesLunaresSprites[i] = ImageIO.read(getClass().getResource("/Graficos/Sprites/Hud/cargaSuper_" + i + ".png"));
+        }
+
+        // GATOS - animaciones
+        gatosIdleSprites = cargarSpritesHUD("/Graficos/Sprites/Hud/idleVidas_", 2);
+        gatosPerderSprites = cargarSpritesHUD("/Graficos/Sprites/Hud/Pierdevidas_", 4);
+        gatosRecuperarSprites = cargarSpritesHUD("/Graficos/Sprites/Hud/Recuperavida_", 4);
+
+        gatosIdleAnim = new Animacion(gatosIdleSprites, 25, true);
+        gatosPerderAnim = new Animacion(gatosPerderSprites, 10, false);
+        gatosRecuperarAnim = new Animacion(gatosRecuperarSprites, 10, false);
     }
 
-    // GATOS - animaciones
-    gatosIdleSprites = cargarSpritesHUD("/Graficos/Sprites/Hud/idleVidas_", 2);
-    gatosPerderSprites = cargarSpritesHUD("/Graficos/Sprites/Hud/Pierdevidas_", 4);
-    gatosRecuperarSprites = cargarSpritesHUD("/Graficos/Sprites/Hud/Recuperavida_", 4);
-
-    gatosIdleAnim = new Animacion(gatosIdleSprites, 25, true);
-    gatosPerderAnim = new Animacion(gatosPerderSprites, 10, false);
-    gatosRecuperarAnim = new Animacion(gatosRecuperarSprites, 10, false);
-}
-
-private BufferedImage[] cargarSpritesHUD(String basePath, int cantidad) throws IOException {
-    BufferedImage[] result = new BufferedImage[cantidad];
-    for (int i = 0; i < cantidad; i++) {
-        result[i] = ImageIO.read(getClass().getResource(basePath + i + ".png"));
+    private BufferedImage[] cargarSpritesHUD(String basePath, int cantidad) throws IOException {
+        BufferedImage[] result = new BufferedImage[cantidad];
+        for (int i = 0; i < cantidad; i++) {
+            result[i] = ImageIO.read(getClass().getResource(basePath + i + ".png"));
+        }
+        return result;
     }
-    return result;
-}
-
 
     // ============================================================
     // 🟣 10. LÓGICA PRINCIPAL (ACTUALIZACIÓN)
@@ -193,6 +205,11 @@ private BufferedImage[] cargarSpritesHUD(String basePath, int cantidad) throws I
      * Actualiza la lógica del jugador
      */
     public void actualizar(boolean izquierda, boolean derecha, boolean arriba, boolean abajo, boolean atacar, boolean saltar, int limiteEscenario) {
+
+        if (estado == Estado.MUERTO) {
+            muerteAnim.actualizar();
+            return;
+        }
 
         // ---------------------------
         // ESTADO: DAÑADO
@@ -353,34 +370,36 @@ private BufferedImage[] cargarSpritesHUD(String basePath, int cantidad) throws I
                 blinkTimer++;
             }
         }
-        
+
         //Animaciones del HUD
-
-       if (animandoPerderVida) {
-    gatosPerderAnim.actualizar();
-    if (gatosPerderAnim.estaTerminada()) {
-        animandoPerderVida = false;
-        if (vidas > 0) {
-            vidas--;  // REDUCE VIDA AQUÍ AL TERMINAR ANIMACIÓN
+        if (animandoPerderVida) {
+            gatosPerderAnim.actualizar();
+            if (gatosPerderAnim.estaTerminada()) {
+                animandoPerderVida = false;
+                if (vidas > 0) {
+                    vidas--;  // REDUCE VIDA AQUÍ AL TERMINAR ANIMACIÓN
+                }
+            }
         }
-    }
+
+        if (animandoRecuperarVida) {
+            gatosRecuperarAnim.actualizar();
+            if (gatosRecuperarAnim.estaTerminada()) {
+                animandoRecuperarVida = false;
+                if (vidas < VIDA_MAXIMA) {
+                    vidas++;
+                }
+            }
+        }
+
+        gatosIdleAnim.actualizar();
+
+        if (vidas <= 0 && estado != Estado.MUERTO) {
+    estado = Estado.MUERTO;
+    muerteAnim.reiniciar();
 }
 
-
-
-if (animandoRecuperarVida) {
-    gatosRecuperarAnim.actualizar();
-    if (gatosRecuperarAnim.estaTerminada()) {
-        animandoRecuperarVida = false;
-        if (vidas < VIDA_MAXIMA) {
-            vidas++;
-        }
-    }
-}
-
-
-gatosIdleAnim.actualizar();
-
+        
     }
 
     private Estado IDLEorWalk(boolean izquierda, boolean derecha) {
@@ -396,50 +415,92 @@ gatosIdleAnim.actualizar();
     // ============================================================
     // 🟣 11. RECIBIR DAÑO
     // ============================================================
-  public void recibirDaño(int cantidad, int direccionEmpuje) {
-    if (invulnerable || estado == Estado.DAÑADO) return;
+    public void recibirDaño(int cantidad, int direccionEmpuje) {
+        if (invulnerable || estado == Estado.DAÑADO) {
+            return;
+        }
 
-    if (!animandoPerderVida && vidas > 0) {
-        animandoPerderVida = true;
-        gatosPerderAnim.reiniciar();
+        perderVida(); // Asegúrate de llamar esto para descontar la vida y verificar muerte
+
+        estado = Estado.DAÑADO;
+        danoAnim.reiniciar();
+
+        invulnerable = true;
+        timerInvulnerable = DURACION_INVULNERABLE_DEFAULT;
+        retrocesoX = direccionEmpuje;
     }
-
-    estado = Estado.DAÑADO;
-    danoAnim.reiniciar();
-
-    invulnerable = true;
-    timerInvulnerable = DURACION_INVULNERABLE_DEFAULT;
-    retrocesoX = direccionEmpuje;
-}
-
 
     //GANAS PARA FASES LUNARES
-   public void ganarFaseLunar() {
-    fasesLunares++;
-    if (fasesLunares > FASES_LUNARES_MAX) {
-        fasesLunares = FASES_LUNARES_MAX;
+    public void ganarFaseLunar() {
+        fasesLunares++;
+        if (fasesLunares > FASES_LUNARES_MAX) {
+            fasesLunares = FASES_LUNARES_MAX;
+        }
+        System.out.println("Fase Lunar actual: " + fasesLunares);
     }
-    System.out.println("Fase Lunar actual: " + fasesLunares);
+
+    public boolean Curarse() {
+        if (fasesLunares >= 3 && vidas < VIDA_MAXIMA) {
+            fasesLunares = Math.max(1, fasesLunares - 2);  // Nunca menor a 1
+            ganarVida();
+            System.out.println("Fases lunares tras curar: " + fasesLunares);
+            return true;
+        } else if (vidas >= VIDA_MAXIMA) {
+            System.out.println("Vida llena: no puedes curarte más.");
+            return false;
+        } else {
+            System.out.println("No tienes suficientes fases lunares para curarte.");
+            return false;
+        }
+    }
+
+    public boolean animacionMuerteTerminada() {
+        return muerteAnim.estaTerminada();
+    }
+
+    public void comenzarCuracion() {
+    if (!cargandoCuracion && fasesLunares >= 3 && vidas < VIDA_MAXIMA && estado == Estado.IDLE) {
+        cargandoCuracion = true;
+        curacionAnim.reiniciar();
+    }
 }
 
 
-
-   public boolean Curarse() {
-    if (fasesLunares >= 3 && vidas < VIDA_MAXIMA) {
-        fasesLunares -= 2;
-        ganarVida();
-        System.out.println("Te has curado. Nuevas fases lunares: " + fasesLunares);
-        return true;
-    } else if (vidas >= VIDA_MAXIMA) {
-        System.out.println("Vida llena: no puedes curarte más.");
-        return false;
-    } else {
-        System.out.println("No tienes suficientes fases lunares para curarte.");
-        return false;
+    public void cancelarCuracion() {
+        if (cargandoCuracion) {
+            cargandoCuracion = false;
+            curacionAnim.reiniciar();
+        }
     }
-}
 
+    public void actualizarCuracion() {
+        if (cargandoCuracion) {
+            curacionAnim.actualizar();
+            if (curacionAnim.estaTerminada()) {
+                Curarse(); // ahora sí cura
+                cargandoCuracion = false;
+            }
+        }
+    }
 
+    public boolean estaCargandoCuracion() {
+        return cargandoCuracion;
+    }
+
+    public void renacer() {
+        if (estado == Estado.MUERTO) {
+            estado = Estado.RENACIENDO;
+            vida = VIDA_MAXIMA;
+            vidas = VIDA_MAXIMA;
+            fasesLunares = 1;
+            x = 50;
+            y = SUELO_Y;
+            invulnerable = false;
+            retrocesoX = 0;
+            renacerAnim.reiniciar();
+            // Aquí puedes reiniciar otras animaciones o estados si quieres
+        }
+    }
 
     // ============================================================
     // 🟣 12. COLISIONES Y HITBOX
@@ -466,16 +527,16 @@ gatosIdleAnim.actualizar();
                 Rectangle hitbox = null;
 
                 if (ataqueActualAnim == ataqueNormalAnim) {
-                    int offsetX = mirandoDerecha ? ANCHO - 40 : -105;
+                    int offsetX = mirandoDerecha ? ANCHO - 40 : -115;
                     hitbox = new Rectangle(x + offsetX, y + 10, 150, 120);
                 } else if (ataqueActualAnim == ataqueArribaAnim) {
                     int offsetX = +5;
                     int offsetY = -90;
-                    hitbox = new Rectangle(x + offsetX, y + offsetY, 100, 100);
+                    hitbox = new Rectangle(x + offsetX, y + offsetY, 100, 120);
                 } else if (ataqueActualAnim == ataqueAbajoAnim) {
-                    int offsetX = +10;
+                    int offsetX = +5;
                     int offsetY = ALTO;
-                    hitbox = new Rectangle(x + offsetX, y + offsetY, 90, 90);
+                    hitbox = new Rectangle(x + offsetX, y + offsetY, 100, 120);
                 }
 
                 if (hitbox != null) {
@@ -501,7 +562,6 @@ gatosIdleAnim.actualizar();
     // ============================================================
     // 🟣 14. DIBUJAR
     // ============================================================
-  
     public void dibujar(Graphics g, int camaraX) {
         Graphics2D g2 = (Graphics2D) g;
         BufferedImage frameBase = null;
@@ -513,6 +573,20 @@ gatosIdleAnim.actualizar();
         // ---------------------------
         // SELECCIÓN DEL FRAME
         // ---------------------------
+       if (cargandoCuracion) {
+    BufferedImage frameCuracion = curacionAnim.getFrameActual();
+    int drawX = x - camaraX + curacionOffsetX;
+    int drawY = y + curacionOffsetY;
+
+    if (!mirandoDerecha) {
+        drawX += ANCHO;
+        g2.drawImage(frameCuracion, drawX, drawY, -ANCHO, ALTO, null);
+    } else {
+        g2.drawImage(frameCuracion, drawX, drawY, ANCHO, ALTO, null);
+    }
+    return;
+}
+
         if (estado == Estado.DAÑADO) {
             frameBase = danoAnim.getFrameActual();
         } else if (estaAtacando && ataqueActualAnim != null) {
@@ -529,17 +603,20 @@ gatosIdleAnim.actualizar();
                 offsetDibujoY = OFFSET_DIBUJO_ATAQUE_Y;
             }
         } else {
-            frameBase = switch (estado) {
-                case IDLE ->
-                    idleAnim.getFrameActual();
-                case CAMINANDO_DERECHA, CAMINANDO_IZQUIERDA ->
-                    caminarAnim.getFrameActual();
-                case SALTANDO, ATERRIZANDO ->
-                    saltoAnim.getFrameActual();
-                default ->
-                    null;
-            };
-        }
+    frameBase = switch (estado) {
+        case IDLE ->
+            idleAnim.getFrameActual();
+        case CAMINANDO_DERECHA, CAMINANDO_IZQUIERDA ->
+            caminarAnim.getFrameActual();
+        case SALTANDO, ATERRIZANDO ->
+            saltoAnim.getFrameActual();
+        case MUERTO ->
+            muerteAnim.getFrameActual();
+        default ->
+            null;
+    };
+}
+
 
         // ---------------------------
         // DIBUJO FINAL
@@ -570,43 +647,50 @@ gatosIdleAnim.actualizar();
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
             }
         }
-        
+
         dibujarHUD(g2);
     }
-    
+
     //Dibujar HUD
     private void dibujarHUD(Graphics2D g2) {
-    // DIBUJAR FASE LUNAR
-    BufferedImage lunaSprite = fasesLunaresSprites[Math.max(0, Math.min(fasesLunares - 1, 4))];
-    g2.drawImage(lunaSprite, 0, 0, 180, 180, null);
+        // DIBUJAR FASE LUNAR
+        BufferedImage lunaSprite = fasesLunaresSprites[Math.max(0, Math.min(fasesLunares - 1, 4))];
+        g2.drawImage(lunaSprite, 0, 0, 180, 180, null);
 
-    // DIBUJAR VIDAS / GATOS
-    for (int i = 0; i < vidas; i++) {
-        int xOffset = 140 + i * 75;
-        BufferedImage frame;
+        // DIBUJAR VIDAS / GATOS
+        for (int i = 0; i < vidas; i++) {
+            int xOffset = 140 + i * 75;
+            BufferedImage frame;
 
-        if (animandoPerderVida && i < vidas) {
-    frame = gatosPerderAnim.getFrameActual();
-}
-
-         else if (animandoRecuperarVida && i < vidas) {
-    frame = gatosRecuperarAnim.getFrameActual();
-}
-
-        else {
-            frame = gatosIdleAnim.getFrameActual();
+            if (animandoPerderVida && i < vidas) {
+                frame = gatosPerderAnim.getFrameActual();
+            } else if (animandoRecuperarVida && i < vidas) {
+                frame = gatosRecuperarAnim.getFrameActual();
+            } else {
+                frame = gatosIdleAnim.getFrameActual();
+            }
+            //Gatos
+            g2.drawImage(frame, xOffset, 20, 90, 90, null);
         }
-        //Gatos
-        g2.drawImage(frame, xOffset, 20, 90, 90, null);
     }
-}
-
 
     // ============================================================
     // 🟣 15. GETTERS
     // ============================================================
     public int getX() {
         return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public int getAncho() {
+        return ANCHO;
+    }
+
+    public int getAlto() {
+        return ALTO;
     }
 
     public int getVida() {
@@ -630,19 +714,27 @@ gatosIdleAnim.actualizar();
     }
 
     public void perderVida() {
-    if (vidas > 0 && !animandoPerderVida) {
-        animandoPerderVida = true;
-        gatosPerderAnim.reiniciar();
-    }   
-}
-
-public void ganarVida() {
-    if (vidas < VIDA_MAXIMA && !animandoRecuperarVida) {
-        animandoRecuperarVida = true;
-        gatosRecuperarAnim.reiniciar();
+        if (vidas > 1) {
+            vidas--;
+            animandoPerderVida = true;
+            gatosPerderAnim.reiniciar();
+        } else {
+            vidas = 0;
+            estado = Estado.MUERTO;
+            muerteAnim.reiniciar();
+            // Aquí deshabilitas input en tu controlador o en PanelJuego
+        }
     }
-}
 
+    public boolean estaMuerto() {
+        return estado == Estado.MUERTO;
+    }
 
+    public void ganarVida() {
+        if (vidas < VIDA_MAXIMA && !animandoRecuperarVida) {
+            animandoRecuperarVida = true;
+            gatosRecuperarAnim.reiniciar();
+        }
+    }
 
 }

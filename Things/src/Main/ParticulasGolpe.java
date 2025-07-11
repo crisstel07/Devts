@@ -12,8 +12,8 @@ public class ParticulasGolpe {
     private int frameActual = 0;
     private int contadorFrame = 0;
     private int velocidadAnimacion = 3;  // Ajusté a más rápido
-    public static final int PARTICULA_ANCHO = 300;
-    public static final int PARTICULA_ALTO = 300;
+    public static final int PARTICULA_ANCHO = 450;
+    public static final int PARTICULA_ALTO = 450;
 
 
     private boolean viva = true;
