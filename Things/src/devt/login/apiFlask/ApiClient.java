@@ -7,373 +7,184 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonElement; // Importar JsonElement para mayor flexibilidad
+import com.google.gson.JsonParser; // Importar JsonParser para parsear la respuesta
+import com.google.gson.JsonSyntaxException;
 
 public class ApiClient {
 
     private static final String API_BASE_URL = "http://localhost:5000/api/";
     private static final Gson gson = new Gson();
 
+    // Clase ApiResponse interna actualizada para ser más flexible
     public static class ApiResponse {
-        public boolean success;
-        public String message;
-        public Integer user_id;
-        public JsonObject user; // Campo para los datos del usuario
-        public JsonObject character; // Campo para los datos del personaje
-        public JsonObject inventory; // Campo para los datos del inventario
-        public Integer slot; // Campo para el slot del inventario (usado en add_item)
+        private boolean success;
+        private String message;
+        private JsonElement data; // Ahora es JsonElement para manejar objetos, arrays, etc.
+
+        // Constructor vacío para Gson
+        public ApiResponse() {}
+
+        // Constructor completo (útil para crear respuestas de error manualmente)
+        public ApiResponse(boolean success, String message, JsonElement data) {
+            this.success = success;
+            this.message = message;
+            this.data = data;
+        }
+
+        public boolean isSuccess() {
+            return success;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public JsonElement getData() { // Retorna JsonElement
+            return data;
+        }
+
+        // Métodos de ayuda para acceder a los datos si sabes su tipo
+        public JsonObject getDataAsJsonObject() {
+            if (data != null && data.isJsonObject()) {
+                return data.getAsJsonObject();
+            }
+            return null;
+        }
+
+        public com.google.gson.JsonArray getDataAsJsonArray() {
+            if (data != null && data.isJsonArray()) {
+                return data.getAsJsonArray();
+            }
+            return null;
+        }
     }
 
-    /**
-     * Registra un nuevo usuario en la API Flask.
-     * @param nombreUsuario Nombre de usuario.
-     * @param correo Correo electrónico.
-     * @param password Contraseña.
-     * @return ApiResponse con el resultado del registro.
-     */
+    // --- Métodos de ayuda para realizar peticiones HTTP ---
+    // (Refactorizados para ser reutilizables y devolver ApiResponse)
+
+    private static ApiResponse executeRequest(String urlString, String method, JsonObject jsonInput) {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(urlString);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod(method);
+            conn.setRequestProperty("Content-Type", "application/json; utf-8");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setConnectTimeout(5000); // 5 segundos de timeout para conexión
+            conn.setReadTimeout(5000); // 5 segundos de timeout para lectura
+
+            if (jsonInput != null) {
+                conn.setDoOutput(true);
+                try (OutputStream os = conn.getOutputStream()) {
+                    byte[] input = jsonInput.toString().getBytes("utf-8");
+                    os.write(input, 0, input.length);
+                }
+            }
+
+            int responseCode = conn.getResponseCode();
+            StringBuilder responseBuilder = new StringBuilder();
+            
+            InputStreamReader isr;
+            if (responseCode >= 200 && responseCode < 300) {
+                isr = new InputStreamReader(conn.getInputStream(), "utf-8");
+            } else {
+                isr = new InputStreamReader(conn.getErrorStream(), "utf-8");
+            }
+
+            try (BufferedReader br = new BufferedReader(isr)) {
+                String responseLine;
+                while ((responseLine = br.readLine()) != null) {
+                    responseBuilder.append(responseLine.trim());
+                }
+            }
+
+            String rawResponse = responseBuilder.toString();
+            System.out.println("Respuesta del servidor (" + method + " " + urlString + ") [" + responseCode + "]: " + rawResponse);
+            
+            // Parsear la respuesta en el nuevo formato ApiResponse
+            try {
+                JsonObject jsonResponse = JsonParser.parseString(rawResponse).getAsJsonObject();
+                boolean success = jsonResponse.has("success") && jsonResponse.get("success").getAsBoolean();
+                String message = jsonResponse.has("message") && !jsonResponse.get("message").isJsonNull() ? jsonResponse.get("message").getAsString() : null;
+                JsonElement data = jsonResponse.has("data") && !jsonResponse.get("data").isJsonNull() ? jsonResponse.get("data") : null;
+                return new ApiResponse(success, message, data);
+            } catch (JsonSyntaxException e) {
+                return new ApiResponse(false, "Error de sintaxis JSON en la respuesta del servidor: " + e.getMessage() + ". Raw: " + rawResponse, null);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error en la petición HTTP a " + urlString + ": " + e.getMessage());
+            return new ApiResponse(false, "Error de conexión o de red: " + e.getMessage(), null);
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
+    // --- Métodos específicos de la API (usando el nuevo executeRequest) ---
+
     public static ApiResponse registerUser(String nombreUsuario, String correo, String password) {
-        try {
-            URL url = new URL(API_BASE_URL + "register");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json; utf-8");
-            conn.setRequestProperty("Accept", "application/json");
-            conn.setDoOutput(true);
-
-            JsonObject jsonInput = new JsonObject();
-            jsonInput.addProperty("nombre_usuario", nombreUsuario);
-            jsonInput.addProperty("correo", correo);
-            jsonInput.addProperty("password", password);
-
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonInput.toString().getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
-
-            int responseCode = conn.getResponseCode();
-            StringBuilder response = new StringBuilder();
-            
-            InputStreamReader isr;
-            if (responseCode >= 200 && responseCode < 300) { 
-                isr = new InputStreamReader(conn.getInputStream(), "utf-8");
-            } else {
-                isr = new InputStreamReader(conn.getErrorStream(), "utf-8");
-            }
-
-            try (BufferedReader br = new BufferedReader(isr)) {
-                String responseLine = null;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
-                }
-            }
-
-            System.out.println("Respuesta del servidor /register (" + responseCode + "): " + response.toString());
-            ApiResponse apiResponse = gson.fromJson(response.toString(), ApiResponse.class);
-            return apiResponse;
-
-        } catch (Exception e) {
-            System.err.println("Error al registrar usuario: " + e.getMessage());
-            ApiResponse errorResponse = new ApiResponse();
-            errorResponse.success = false;
-            errorResponse.message = "Error de conexión o de red: " + e.getMessage();
-            return errorResponse;
-        }
+        JsonObject jsonInput = new JsonObject();
+        jsonInput.addProperty("nombre_usuario", nombreUsuario);
+        jsonInput.addProperty("correo", correo);
+        jsonInput.addProperty("password", password);
+        return executeRequest(API_BASE_URL + "register", "POST", jsonInput);
     }
 
-    /**
-     * Verifica el código de un usuario registrado.
-     * @param userId ID del usuario.
-     * @param code Código de verificación.
-     * @return ApiResponse con el resultado de la verificación.
-     */
     public static ApiResponse verifyUser(int userId, String code) {
-        try {
-            URL url = new URL(API_BASE_URL + "verify");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json; utf-8");
-            conn.setRequestProperty("Accept", "application/json");
-            conn.setDoOutput(true);
-
-            JsonObject jsonInput = new JsonObject();
-            jsonInput.addProperty("user_id", userId);
-            jsonInput.addProperty("code", code);
-
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonInput.toString().getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
-
-            int responseCode = conn.getResponseCode();
-            StringBuilder response = new StringBuilder();
-            
-            InputStreamReader isr;
-            if (responseCode >= 200 && responseCode < 300) {
-                isr = new InputStreamReader(conn.getInputStream(), "utf-8");
-            } else {
-                isr = new InputStreamReader(conn.getErrorStream(), "utf-8");
-            }
-
-            try (BufferedReader br = new BufferedReader(isr)) {
-                String responseLine = null;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
-                }
-            }
-
-            System.out.println("Respuesta del servidor /verify (" + responseCode + "): " + response.toString());
-            ApiResponse apiResponse = gson.fromJson(response.toString(), ApiResponse.class);
-            return apiResponse;
-
-        } catch (Exception e) {
-            System.err.println("Error al verificar usuario: " + e.getMessage());
-            ApiResponse errorResponse = new ApiResponse();
-            errorResponse.success = false;
-            errorResponse.message = "Error de conexión o de red durante la verificación: " + e.getMessage();
-            return errorResponse;
-        }
+        JsonObject jsonInput = new JsonObject();
+        jsonInput.addProperty("user_id", userId);
+        jsonInput.addProperty("code", code);
+        return executeRequest(API_BASE_URL + "verify", "POST", jsonInput);
     }
 
-    /**
-     * Inicia sesión de un usuario.
-     * @param correo Correo electrónico del usuario.
-     * @param password Contraseña del usuario.
-     * @return ApiResponse con los datos del usuario si el inicio de sesión es exitoso.
-     */
     public static ApiResponse loginUser(String correo, String password) {
-        try {
-            URL url = new URL(API_BASE_URL + "login");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json; utf-8");
-            conn.setRequestProperty("Accept", "application/json");
-            conn.setDoOutput(true);
-
-            JsonObject jsonInput = new JsonObject();
-            jsonInput.addProperty("correo", correo);
-            jsonInput.addProperty("password", password);
-
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonInput.toString().getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
-
-            int responseCode = conn.getResponseCode();
-            StringBuilder response = new StringBuilder();
-            
-            InputStreamReader isr;
-            if (responseCode >= 200 && responseCode < 300) {
-                isr = new InputStreamReader(conn.getInputStream(), "utf-8");
-            } else {
-                isr = new InputStreamReader(conn.getErrorStream(), "utf-8");
-            }
-
-            try (BufferedReader br = new BufferedReader(isr)) {
-                String responseLine = null;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
-                }
-            }
-
-            System.out.println("Respuesta del servidor /login (" + responseCode + "): " + response.toString());
-            ApiResponse apiResponse = gson.fromJson(response.toString(), ApiResponse.class);
-            return apiResponse;
-
-        } catch (Exception e) {
-            System.err.println("Error al iniciar sesión: " + e.getMessage());
-            ApiResponse errorResponse = new ApiResponse();
-            errorResponse.success = false;
-            errorResponse.message = "Error de conexión o de red durante el inicio de sesión: " + e.getMessage();
-            return errorResponse;
-        }
+        JsonObject jsonInput = new JsonObject();
+        jsonInput.addProperty("correo", correo);
+        jsonInput.addProperty("password", password);
+        return executeRequest(API_BASE_URL + "login", "POST", jsonInput);
     }
 
-    /**
-     * Obtiene el perfil de un personaje o lo crea si no existe para el user_id dado.
-     * @param userId ID del usuario al que pertenece el personaje.
-     * @return ApiResponse con los datos del personaje.
-     */
     public static ApiResponse getOrCreateCharacterProfile(int userId) {
-        try {
-            // Esta URL debe coincidir con tu API Flask: /api/profile/<user_id>
-            URL url = new URL(API_BASE_URL + "profile/" + userId);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Accept", "application/json");
-
-            int responseCode = conn.getResponseCode();
-            StringBuilder response = new StringBuilder();
-            
-            InputStreamReader isr;
-            if (responseCode >= 200 && responseCode < 300) {
-                isr = new InputStreamReader(conn.getInputStream(), "utf-8");
-            } else {
-                isr = new InputStreamReader(conn.getErrorStream(), "utf-8");
-            }
-
-            try (BufferedReader br = new BufferedReader(isr)) {
-                String responseLine = null;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
-                }
-            }
-
-            System.out.println("Respuesta del servidor /profile (" + responseCode + "): " + response.toString());
-            ApiResponse apiResponse = gson.fromJson(response.toString(), ApiResponse.class);
-            return apiResponse;
-
-        } catch (Exception e) {
-            System.err.println("Error al obtener/crear perfil de personaje: " + e.getMessage());
-            ApiResponse errorResponse = new ApiResponse();
-            errorResponse.success = false;
-            errorResponse.message = "Error de conexión o de red al cargar perfil: " + e.getMessage();
-            return errorResponse;
-        }
+        // Asegúrate de que tu API Flask tenga un endpoint GET /api/profile/<user_id>
+        return executeRequest(API_BASE_URL + "profile/" + userId, "GET", null);
     }
 
-    /**
-     * Actualiza el perfil de un personaje existente.
-     * @param characterId ID del personaje a actualizar.
-     * @param updateData JsonObject con los campos a actualizar (ej. nombre_personaje, foto_perfil_url).
-     * @return ApiResponse con el resultado de la actualización.
-     */
+    // Método para obtener un personaje por su ID (nuevo, usado por PanelProfileAndInventory)
+    public static ApiResponse getCharacterById(int characterId) {
+        // Asegúrate de que tu API Flask tenga un endpoint GET /api/characters/<character_id>
+        return executeRequest(API_BASE_URL + "characters/" + characterId, "GET", null);
+    }
+
+    // Método para actualizar el perfil de un personaje (existente, adaptado)
+    // Ahora acepta un JsonObject completo para la actualización
     public static ApiResponse updateCharacterProfile(int characterId, JsonObject updateData) {
-        try {
-            URL url = new URL(API_BASE_URL + "profile/" + characterId);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("PUT");
-            conn.setRequestProperty("Content-Type", "application/json; utf-8");
-            conn.setRequestProperty("Accept", "application/json");
-            conn.setDoOutput(true);
-
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = updateData.toString().getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
-
-            int responseCode = conn.getResponseCode();
-            StringBuilder response = new StringBuilder();
-            
-            InputStreamReader isr;
-            if (responseCode >= 200 && responseCode < 300) {
-                isr = new InputStreamReader(conn.getInputStream(), "utf-8");
-            } else {
-                isr = new InputStreamReader(conn.getErrorStream(), "utf-8");
-            }
-
-            try (BufferedReader br = new BufferedReader(isr)) {
-                String responseLine = null;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
-                }
-            }
-
-            System.out.println("Respuesta del servidor PUT /profile (" + responseCode + "): " + response.toString());
-            ApiResponse apiResponse = gson.fromJson(response.toString(), ApiResponse.class);
-            return apiResponse;
-
-        } catch (Exception e) {
-            System.err.println("Error al actualizar perfil de personaje: " + e.getMessage());
-            ApiResponse errorResponse = new ApiResponse();
-            errorResponse.success = false;
-            errorResponse.message = "Error de conexión o de red al actualizar perfil: " + e.getMessage();
-            return errorResponse;
-        }
+        // Asegúrate de que tu API Flask tenga un endpoint PUT /api/profile/<character_id>
+        // o /api/characters/<character_id> si usas el que te di antes.
+        // Usaré /profile/ por consistencia con tu código original.
+        return executeRequest(API_BASE_URL + "profile/" + characterId, "PUT", updateData);
     }
-
-    /**
-     * Obtiene el inventario de un personaje.
-     * @param characterId ID del personaje.
-     * @return ApiResponse con la lista de ítems en el inventario.
-     */
+    
+    // Método para obtener el inventario de un personaje (existente, adaptado)
     public static ApiResponse getCharacterInventory(int characterId) {
-        try {
-            URL url = new URL(API_BASE_URL + "inventory/" + characterId);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Accept", "application/json");
-
-            int responseCode = conn.getResponseCode();
-            StringBuilder response = new StringBuilder();
-            
-            InputStreamReader isr;
-            if (responseCode >= 200 && responseCode < 300) {
-                isr = new InputStreamReader(conn.getInputStream(), "utf-8");
-            } else {
-                isr = new InputStreamReader(conn.getErrorStream(), "utf-8");
-            }
-
-            try (BufferedReader br = new BufferedReader(isr)) {
-                String responseLine = null;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
-                }
-            }
-
-            System.out.println("Respuesta del servidor /inventory (" + responseCode + "): " + response.toString());
-            ApiResponse apiResponse = gson.fromJson(response.toString(), ApiResponse.class);
-            return apiResponse;
-
-        } catch (Exception e) {
-            System.err.println("Error al obtener inventario de personaje: " + e.getMessage());
-            ApiResponse errorResponse = new ApiResponse();
-            errorResponse.success = false;
-            errorResponse.message = "Error de conexión o de red al cargar inventario: " + e.getMessage();
-            return errorResponse;
-        }
+        // Asegúrate de que tu API Flask tenga un endpoint GET /api/inventory/<character_id>
+        return executeRequest(API_BASE_URL + "inventory/" + characterId, "GET", null);
     }
 
-    /**
-     * Añade o actualiza un ítem en el inventario de un personaje.
-     * @param characterId ID del personaje.
-     * @param itemId ID del ítem a añadir.
-     * @param quantity Cantidad a añadir.
-     * @return ApiResponse con el resultado de la operación.
-     */
+    // Método para añadir un ítem al inventario (existente, adaptado)
     public static ApiResponse addItemToInventory(int characterId, int itemId, int quantity) {
-        try {
-            URL url = new URL(API_BASE_URL + "inventory/" + characterId + "/add");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json; utf-8");
-            conn.setRequestProperty("Accept", "application/json");
-            conn.setDoOutput(true);
+        JsonObject jsonInput = new JsonObject();
+        jsonInput.addProperty("item_id", itemId);
+        jsonInput.addProperty("cantidad", quantity);
+        // Asegúrate de que tu API Flask tenga un endpoint POST /api/inventory/<character_id>/add
+        return executeRequest(API_BASE_URL + "inventory/" + characterId + "/add", "POST", jsonInput);
+    }
 
-            JsonObject jsonInput = new JsonObject();
-            jsonInput.addProperty("item_id", itemId);
-            jsonInput.addProperty("cantidad", quantity);
-
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonInput.toString().getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
-
-            int responseCode = conn.getResponseCode();
-            StringBuilder response = new StringBuilder();
-            
-            InputStreamReader isr;
-            if (responseCode >= 200 && responseCode < 300) {
-                isr = new InputStreamReader(conn.getInputStream(), "utf-8");
-            } else {
-                isr = new InputStreamReader(conn.getErrorStream(), "utf-8");
-            }
-
-            try (BufferedReader br = new BufferedReader(isr)) {
-                String responseLine = null;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
-                }
-            }
-
-            System.out.println("Respuesta del servidor /inventory/add (" + responseCode + "): " + response.toString());
-            ApiResponse apiResponse = gson.fromJson(response.toString(), ApiResponse.class);
-            return apiResponse;
-
-        } catch (Exception e) {
-            System.err.println("Error al añadir ítem al inventario: " + e.getMessage());
-            ApiResponse errorResponse = new ApiResponse();
-            errorResponse.success = false;
-            errorResponse.message = "Error de conexión o de red al añadir ítem: " + e.getMessage();
-            return errorResponse;
-        }
+    // Nuevo método para obtener enemigos derrotados (usado por PanelProfileAndInventory)
+    public static ApiResponse getEnemiesDefeated(int characterId) {
+        // Asegúrate de que tu API Flask tenga un endpoint GET /api/enemies_defeated/<character_id>
+        return executeRequest(API_BASE_URL + "enemies_defeated/" + characterId, "GET", null);
     }
 }
