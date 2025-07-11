@@ -7,6 +7,7 @@ import Main.Animacion;
 import java.util.ArrayList;
 import java.util.List;
 import Escenarios.*;
+import Sonido.Sonido;
 
 public class Fargano extends EnemigoBase {
 
@@ -19,7 +20,7 @@ public class Fargano extends EnemigoBase {
 
     private boolean invulnerable = false;
     private int tiempoInvulnerable = 0;
-    private final int DURACION_INVULNERABLE = 60; // 1.5 segundos si el juego va a 60fps
+    private final int DURACION_INVULNERABLE = 40; // 1.5 segundos si el juego va a 60fps
 
     private boolean fargGenerado = false;
     private boolean yaDisparoEnEsteAtaque = false;
@@ -144,8 +145,8 @@ public class Fargano extends EnemigoBase {
     }
 
     @Override
-    public void recibirDano(int cantidad, int direccionEmpuje) {
-        if (invulnerable || estado == Estado.MUERTO) return;
+    public boolean recibirDano(int cantidad, int direccionEmpuje) {
+        if (invulnerable || estado == Estado.MUERTO) return false ;
 
         x += direccionEmpuje + RETROCESO_PIXELES;
         vida -= cantidad;
@@ -155,7 +156,9 @@ public class Fargano extends EnemigoBase {
         if (vida <= 0) {
             estado = Estado.MUERTO;
             animMuerte.reiniciar();
+            return true;
         }
+        return false;
     }
 
     @Override

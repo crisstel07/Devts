@@ -4,11 +4,12 @@ import Main.Animacion;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import Main.Jugador;
+import Sonido.Sonido;
 
 public class BalaFargano {
 
     private int x, y;
-    private int velocidadX = 8;
+    private int velocidadX = 10;
     private int direccion; // -1 o 1
     private boolean activa = true;
     

@@ -7,6 +7,7 @@ import java.io.IOException;
 import Main.Jugador;
 import java.util.Objects;
 import Main.Animacion;
+import Sonido.Sonido;
 
 public class Darker extends EnemigoBase {
 
@@ -23,7 +24,7 @@ private int offsetYCaminar = -320;
 // Invulnerabilidad
 private boolean invulnerable = false;
 private int tiempoInvulnerable = 0;
-private final int DURACION_INVULNERABLE = 60;
+private final int DURACION_INVULNERABLE = 40;
 
 // Retroceso
 private int retrocesoX = 0;
@@ -45,7 +46,7 @@ private boolean estaMuriendo = false;
 
     private boolean mirandoDerecha = true;
     private final int RADIO_DETECCION = 500;
-    private final int VELOCIDAD = 2;
+    private final int VELOCIDAD = 4;
     private int velocidadX = 0;
 
     private int vida = 3;
@@ -218,8 +219,8 @@ if (estaMuriendo && animacionMuerte != null) {
     recibirDano(cantidad, 0);
 }
 
-public void recibirDano(int cantidad, int direccionEmpuje) {
-    if (invulnerable || estaMuriendo || !vivo) return;
+public boolean recibirDano(int cantidad, int direccionEmpuje) {
+    if (invulnerable || estaMuriendo || !vivo) return false;
 
     vida -= cantidad;
 
@@ -227,13 +228,14 @@ public void recibirDano(int cantidad, int direccionEmpuje) {
         estaMuriendo = true;
         animacionMuerte.reiniciar();
         velocidadX = 0;
-        return;
+        return true;
     }
 
     // Activar invulnerabilidad y retroceso
     invulnerable = true;
     tiempoInvulnerable = DURACION_INVULNERABLE;
     retrocesoX = direccionEmpuje;
+    return false;
     }
 
     public int getVelocidadX() {

@@ -62,21 +62,24 @@ public abstract class EnemigoBase {
     public abstract int getVelocidadX();
 
     // ⚡️ Nuevo: llamada desde PanelJuego
-    public void recibirDano(int cantidad, int direccionEmpuje) {
-        if (!vivo || invulnerable) return;
+    public boolean recibirDano(int cantidad, int direccionEmpuje) {
+        if (!vivo || invulnerable) return false;
 
-        vida -= cantidad;
-        if (vida <= 0) {
-            vivo = false;
-            return;
-        }
+vida -= cantidad;
+if (vida <= 0) {
+    vivo = false;
+    return true;
+}
 
-        // activar invulnerabilidad
-        invulnerable = true;
-        timerInvulnerable = DURACION_INVULNERABLE;
+// activar invulnerabilidad
+invulnerable = true;
+timerInvulnerable = DURACION_INVULNERABLE;
 
-        // aplicar retroceso
-        retrocesoX = direccionEmpuje > 0 ? 40 : -40;
+// aplicar retroceso
+retrocesoX = direccionEmpuje > 0 ? 40 : -40;
+
+return false;
+
     }
 
     // ⚡️ Todos tus enemigos DEBEN llamar super.actualizar() para esto:
@@ -101,6 +104,10 @@ public abstract class EnemigoBase {
             }
         }
     }
+
+    public int getVida() {
+    return vida;
+}
 
     // ➜ obligatorio en cada subclase
     public abstract void actualizar();

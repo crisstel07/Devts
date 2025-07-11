@@ -7,7 +7,7 @@ import java.awt.event.KeyListener;
 public class Teclado implements KeyListener {
 
     public boolean izquierda, derecha, arriba, abajo, saltar, mostrarHitbox;
-
+public boolean curar = false;
     @Override
     public void keyTyped(KeyEvent e) {
     }
@@ -36,6 +36,10 @@ public class Teclado implements KeyListener {
         if (tecla == KeyEvent.VK_P) {
             mostrarHitbox = !mostrarHitbox;
         }
+        if (tecla == KeyEvent.VK_E) {
+    curar = true;
+}
+
 
     }
 
@@ -60,6 +64,10 @@ public class Teclado implements KeyListener {
         if (tecla == KeyEvent.VK_S) {
             abajo = false;
         }
+        if (tecla == KeyEvent.VK_E) {
+    curar = false;
+}
+
 
     }
 

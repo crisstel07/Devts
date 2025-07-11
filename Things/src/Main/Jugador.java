@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.List;
+import Sonido.Sonido;
 
 public class Jugador {
 
@@ -39,9 +40,30 @@ public class Jugador {
     private int vida = 5;
     private boolean invulnerable = false;
     private int timerInvulnerable = 0;
+    
+    private int fasesLunares = 1;  // empieza en vacía
+private final int FASES_LUNARES_MAX = 5;
+
+    // ================================
+// 3.5 SPRITES HUD
+// ================================
+    private BufferedImage[] fasesLunaresSprites;
+    private BufferedImage[] gatosIdleSprites;
+    private BufferedImage[] gatosPerderSprites;
+    private BufferedImage[] gatosRecuperarSprites;
+
+// Estados
+
+    private int vidas = 5;
+
+    private Animacion gatosIdleAnim;
+    private Animacion gatosPerderAnim;
+    private Animacion gatosRecuperarAnim;
+    private boolean animandoPerderVida = false;
+    private boolean animandoRecuperarVida = false;
 
     // Se define automáticamente con la animación de daño
-    private final int DURACION_INVULNERABLE_DEFAULT = 180;
+    private final int DURACION_INVULNERABLE_DEFAULT = 120;
 
     private int retrocesoX = 0;
 
@@ -91,12 +113,24 @@ public class Jugador {
     private Animacion danoAnim;
 
     // ============================================================
+// 🟣 7.5 FASES LUNARES
+// ============================================================
+   
+  
+    private final int VIDA_MAXIMA = 5;
+
+    // ============================================================
     // 🟣 8. CONSTRUCTOR
     // ============================================================
     public Jugador() {
         x = 50;
         y = SUELO_Y;
         cargarAnimaciones();
+       try {
+        cargarHUDSprites();
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
     }
 
     // ============================================================
@@ -124,6 +158,33 @@ public class Jugador {
         }
         return sprites;
     }
+    
+    
+    private void cargarHUDSprites() throws IOException {
+    // FASES LUNARES
+    fasesLunaresSprites = new BufferedImage[5];
+    for (int i = 0; i < 5; i++) {
+        fasesLunaresSprites[i] = ImageIO.read(getClass().getResource("/Graficos/Sprites/Hud/cargaSuper_" + i + ".png"));
+    }
+
+    // GATOS - animaciones
+    gatosIdleSprites = cargarSpritesHUD("/Graficos/Sprites/Hud/idleVidas_", 2);
+    gatosPerderSprites = cargarSpritesHUD("/Graficos/Sprites/Hud/Pierdevidas_", 4);
+    gatosRecuperarSprites = cargarSpritesHUD("/Graficos/Sprites/Hud/Recuperavida_", 4);
+
+    gatosIdleAnim = new Animacion(gatosIdleSprites, 25, true);
+    gatosPerderAnim = new Animacion(gatosPerderSprites, 10, false);
+    gatosRecuperarAnim = new Animacion(gatosRecuperarSprites, 10, false);
+}
+
+private BufferedImage[] cargarSpritesHUD(String basePath, int cantidad) throws IOException {
+    BufferedImage[] result = new BufferedImage[cantidad];
+    for (int i = 0; i < cantidad; i++) {
+        result[i] = ImageIO.read(getClass().getResource(basePath + i + ".png"));
+    }
+    return result;
+}
+
 
     // ============================================================
     // 🟣 10. LÓGICA PRINCIPAL (ACTUALIZACIÓN)
@@ -293,6 +354,33 @@ public class Jugador {
             }
         }
         
+        //Animaciones del HUD
+
+       if (animandoPerderVida) {
+    gatosPerderAnim.actualizar();
+    if (gatosPerderAnim.estaTerminada()) {
+        animandoPerderVida = false;
+        if (vidas > 0) {
+            vidas--;  // REDUCE VIDA AQUÍ AL TERMINAR ANIMACIÓN
+        }
+    }
+}
+
+
+
+if (animandoRecuperarVida) {
+    gatosRecuperarAnim.actualizar();
+    if (gatosRecuperarAnim.estaTerminada()) {
+        animandoRecuperarVida = false;
+        if (vidas < VIDA_MAXIMA) {
+            vidas++;
+        }
+    }
+}
+
+
+gatosIdleAnim.actualizar();
+
     }
 
     private Estado IDLEorWalk(boolean izquierda, boolean derecha) {
@@ -308,21 +396,50 @@ public class Jugador {
     // ============================================================
     // 🟣 11. RECIBIR DAÑO
     // ============================================================
-    public void recibirDaño(int cantidad, int direccionEmpuje) {
-        if (invulnerable || estado == Estado.DAÑADO) {
-            return;
-        }
+  public void recibirDaño(int cantidad, int direccionEmpuje) {
+    if (invulnerable || estado == Estado.DAÑADO) return;
 
-        vida -= cantidad;
-
-        estado = Estado.DAÑADO;
-        danoAnim.reiniciar();
-
-        invulnerable = true;
-        timerInvulnerable = DURACION_INVULNERABLE_DEFAULT;
-
-        retrocesoX = direccionEmpuje;
+    if (!animandoPerderVida && vidas > 0) {
+        animandoPerderVida = true;
+        gatosPerderAnim.reiniciar();
     }
+
+    estado = Estado.DAÑADO;
+    danoAnim.reiniciar();
+
+    invulnerable = true;
+    timerInvulnerable = DURACION_INVULNERABLE_DEFAULT;
+    retrocesoX = direccionEmpuje;
+}
+
+
+    //GANAS PARA FASES LUNARES
+   public void ganarFaseLunar() {
+    fasesLunares++;
+    if (fasesLunares > FASES_LUNARES_MAX) {
+        fasesLunares = FASES_LUNARES_MAX;
+    }
+    System.out.println("Fase Lunar actual: " + fasesLunares);
+}
+
+
+
+   public boolean Curarse() {
+    if (fasesLunares >= 3 && vidas < VIDA_MAXIMA) {
+        fasesLunares -= 2;
+        ganarVida();
+        System.out.println("Te has curado. Nuevas fases lunares: " + fasesLunares);
+        return true;
+    } else if (vidas >= VIDA_MAXIMA) {
+        System.out.println("Vida llena: no puedes curarte más.");
+        return false;
+    } else {
+        System.out.println("No tienes suficientes fases lunares para curarte.");
+        return false;
+    }
+}
+
+
 
     // ============================================================
     // 🟣 12. COLISIONES Y HITBOX
@@ -331,63 +448,60 @@ public class Jugador {
         return new Rectangle(x + OFFSET_HITBOX_X, y + OFFSET_HITBOX_Y, HITBOX_ANCHO, HITBOX_ALTO);
     }
 //Repeler hitboxes
-    public void moverX(int dx) {
-    x += dx;
-}
 
-    
-    
+    public void moverX(int dx) {
+        x += dx;
+    }
+
     // ============================================================
     // 🟣 13. ATAQUES HITBOX
     // ============================================================
-   public void generarHitboxAtaque(List<AtaqueHitbox> listaHitboxes) {
-    if (estaAtacando && ataqueActualAnim != null) {
+    public void generarHitboxAtaque(List<AtaqueHitbox> listaHitboxes) {
+        if (estaAtacando && ataqueActualAnim != null) {
 
-        int frameImpacto = getFrameImpactoParaAnimacion(ataqueActualAnim);
+            int frameImpacto = getFrameImpactoParaAnimacion(ataqueActualAnim);
 
-        if (ataqueActualAnim.getFrameActualIndex() == frameImpacto) {
-            
-            Rectangle hitbox = null;
+            if (ataqueActualAnim.getFrameActualIndex() == frameImpacto) {
 
-            if (ataqueActualAnim == ataqueNormalAnim) {
-                int offsetX = mirandoDerecha ? ANCHO - 40 : -105;
-                hitbox = new Rectangle(x + offsetX, y + 10, 150, 120);
-            }
-            else if (ataqueActualAnim == ataqueArribaAnim) {
-                int offsetX = +5;
-                int offsetY = -90;
-                hitbox = new Rectangle(x + offsetX, y + offsetY, 100, 100);
-            }
-            else if (ataqueActualAnim == ataqueAbajoAnim) {
-                int offsetX = +10;
-                int offsetY = ALTO;
-                hitbox = new Rectangle(x + offsetX, y + offsetY, 90, 90);
-            }
+                Rectangle hitbox = null;
 
-            if (hitbox != null) {
-                listaHitboxes.add(new AtaqueHitbox(hitbox, 10));
+                if (ataqueActualAnim == ataqueNormalAnim) {
+                    int offsetX = mirandoDerecha ? ANCHO - 40 : -105;
+                    hitbox = new Rectangle(x + offsetX, y + 10, 150, 120);
+                } else if (ataqueActualAnim == ataqueArribaAnim) {
+                    int offsetX = +5;
+                    int offsetY = -90;
+                    hitbox = new Rectangle(x + offsetX, y + offsetY, 100, 100);
+                } else if (ataqueActualAnim == ataqueAbajoAnim) {
+                    int offsetX = +10;
+                    int offsetY = ALTO;
+                    hitbox = new Rectangle(x + offsetX, y + offsetY, 90, 90);
+                }
+
+                if (hitbox != null) {
+                    listaHitboxes.add(new AtaqueHitbox(hitbox, 10));
+                }
             }
         }
     }
-}
 
-    
-private int getFrameImpactoParaAnimacion(Animacion anim) {
-    if (anim == ataqueNormalAnim) return 3;
-    if (anim == ataqueArribaAnim) return 2;
-    if (anim == ataqueAbajoAnim) return 2;
-    return 3; // valor por defecto
-}
+    private int getFrameImpactoParaAnimacion(Animacion anim) {
+        if (anim == ataqueNormalAnim) {
+            return 1;
+        }
+        if (anim == ataqueArribaAnim) {
+            return 1;
+        }
+        if (anim == ataqueAbajoAnim) {
+            return 1;
+        }
+        return 3; // valor por defecto
+    }
 
     // ============================================================
     // 🟣 14. DIBUJAR
     // ============================================================
-    /**
-     * Dibuja el jugador en pantalla
-     */
-    /**
-     * Dibuja el jugador en pantalla
-     */
+  
     public void dibujar(Graphics g, int camaraX) {
         Graphics2D g2 = (Graphics2D) g;
         BufferedImage frameBase = null;
@@ -456,7 +570,37 @@ private int getFrameImpactoParaAnimacion(Animacion anim) {
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
             }
         }
+        
+        dibujarHUD(g2);
     }
+    
+    //Dibujar HUD
+    private void dibujarHUD(Graphics2D g2) {
+    // DIBUJAR FASE LUNAR
+    BufferedImage lunaSprite = fasesLunaresSprites[Math.max(0, Math.min(fasesLunares - 1, 4))];
+    g2.drawImage(lunaSprite, 0, 0, 180, 180, null);
+
+    // DIBUJAR VIDAS / GATOS
+    for (int i = 0; i < vidas; i++) {
+        int xOffset = 140 + i * 75;
+        BufferedImage frame;
+
+        if (animandoPerderVida && i < vidas) {
+    frame = gatosPerderAnim.getFrameActual();
+}
+
+         else if (animandoRecuperarVida && i < vidas) {
+    frame = gatosRecuperarAnim.getFrameActual();
+}
+
+        else {
+            frame = gatosIdleAnim.getFrameActual();
+        }
+        //Gatos
+        g2.drawImage(frame, xOffset, 20, 90, 90, null);
+    }
+}
+
 
     // ============================================================
     // 🟣 15. GETTERS
@@ -480,4 +624,25 @@ private int getFrameImpactoParaAnimacion(Animacion anim) {
     public void resetearPosicion() {
         x = 50;
     }
+
+    public int getFasesLunares() {
+        return fasesLunares;
+    }
+
+    public void perderVida() {
+    if (vidas > 0 && !animandoPerderVida) {
+        animandoPerderVida = true;
+        gatosPerderAnim.reiniciar();
+    }   
+}
+
+public void ganarVida() {
+    if (vidas < VIDA_MAXIMA && !animandoRecuperarVida) {
+        animandoRecuperarVida = true;
+        gatosRecuperarAnim.reiniciar();
+    }
+}
+
+
+
 }

@@ -7,6 +7,7 @@ import javax.swing.*;
 import java.awt.*;
 import Escenarios.*;
 import java.util.ArrayList;
+import Sonido.Sonido;
 
 public class PanelJuego extends JPanel implements Runnable {
 
@@ -106,7 +107,7 @@ public class PanelJuego extends JPanel implements Runnable {
         }
     }
 
-    // Actualizar lógica del juego
+    // ACTUALIZAR LOGICA DEL JUEGO
     public void actualizar() {
 
         // ✅ Actualizar jugador (siempre se actualiza para movimiento, gravedad, etc.)
@@ -115,6 +116,11 @@ public class PanelJuego extends JPanel implements Runnable {
                 mouse.atacar, teclado.saltar,
                 anchoEscenario + 300 // Permite salir 300 px fuera
         );
+        
+        // ✅ Verificar si se quiere curar
+if (teclado.curar) {
+    jugador.Curarse();
+}
 
         // ✅ Manejar transiciones de nivel (fade in/out)
         if (enTransicion) {
@@ -184,6 +190,7 @@ for (EnemigoBase enemigo : escenario.getEnemigos()) {
                 if (enemigo.estaVivo() && jugador.getRect().intersects(enemigo.getRect())) {
                     int direccionEmpuje = (jugador.getX() < enemigo.getX()) ? +60 : -60;
                     enemigo.recibirDano(1, direccionEmpuje);
+                
 
                 }
             }
@@ -200,23 +207,28 @@ for (EnemigoBase enemigo : escenario.getEnemigos()) {
 
         // ✅ Aplicar daño a enemigos que colisionan con hitboxes activas
         for (EnemigoBase enemigo : escenario.getEnemigos()) {
-            if (!enemigo.estaVivo()) {
-                continue;
-            }
-            for (AtaqueHitbox hb : hitboxesDeAtaque) {
-                if (hb.getRect().intersects(enemigo.getRect())) {
-                    int direccionEmpuje = (jugador.getX() < enemigo.getX()) ? +50 : -50;
-                    // Calculamos el centro del enemigo para ubicar la partícula
-                    int offsetVertical = -200;
-                    int centroX = enemigo.getX() + enemigo.getAncho() / 2 - ParticulasGolpe.PARTICULA_ANCHO / 2;
-                    int centroY = enemigo.getY() + enemigo.getAlto() / 2 - ParticulasGolpe.PARTICULA_ALTO / 2 + offsetVertical;
+    if (!enemigo.estaVivo()) continue;
 
-                    particulasGolpe.add(new ParticulasGolpe(centroX, centroY));
+    for (AtaqueHitbox hb : hitboxesDeAtaque) {
+        if (hb.getRect().intersects(enemigo.getRect())) {
+            int direccionEmpuje = (jugador.getX() < enemigo.getX()) ? +50 : -50;
 
-                    enemigo.recibirDano(1, direccionEmpuje);
-                }
+            boolean murio = enemigo.recibirDano(1, direccionEmpuje);
+            if (murio) {
+                jugador.ganarFaseLunar();
             }
+
+            // Partículas solo si se daña
+            int offsetVertical = -200;
+            int centroX = enemigo.getX() + enemigo.getAncho() / 2 - ParticulasGolpe.PARTICULA_ANCHO / 2;
+            int centroY = enemigo.getY() + enemigo.getAlto() / 2 - ParticulasGolpe.PARTICULA_ALTO / 2 + offsetVertical;
+            particulasGolpe.add(new ParticulasGolpe(centroX, centroY));
         }
+    }
+}
+
+
+        
 
         for (int i = particulasGolpe.size() - 1; i >= 0; i--) {
             ParticulasGolpe p = particulasGolpe.get(i);
@@ -228,6 +240,8 @@ for (EnemigoBase enemigo : escenario.getEnemigos()) {
 
         // ✅ Manejar mostrar hitboxes
         mostrarHitboxes = teclado.mostrarHitbox;
+        
+        
     }
     
     private void resolverEmpuje(Jugador jugador, EnemigoBase enemigo) {
@@ -278,6 +292,11 @@ for (EnemigoBase enemigo : escenario.getEnemigos()) {
         for (ParticulasGolpe p : particulasGolpe) {
             p.dibujar(g, camaraX);
         }
+        
+
+        
+        
+        //MOSTRAR LAS HITBOX CON P
         if (mostrarHitboxes) {
             // HITBOX DEL JUGADOR
             Graphics2D g2d = (Graphics2D) g;

@@ -5,6 +5,7 @@ import java.awt.image.BufferedImage;
 import Main.Animacion;
 import Main.Jugador;
 import Escenarios.*;
+import Sonido.Sonido;
 
 public class Fargo extends EnemigoBase {
 
@@ -12,9 +13,9 @@ public class Fargo extends EnemigoBase {
     private int vida = 2;
     private boolean invulnerable = false;
     private int tiempoInvulnerable = 0;
-    private final int DURACION_INVULNERABLE = 60;
-    private final int RETROCESO_PIXELES = 30;
-    private int velocidadX = 2;
+    private final int DURACION_INVULNERABLE = 40;
+    private final int RETROCESO_PIXELES = 20;
+    private int velocidadX = 5;
 
     private boolean mirandoDerecha = true;
 
@@ -100,9 +101,9 @@ private int spriteHeight = 70   ;
     }
 
     @Override
-    public void recibirDano(int cantidad, int direccionEmpuje) {
+    public boolean recibirDano(int cantidad, int direccionEmpuje) {
         if (invulnerable || estado == Estado.MUERTE) {
-            return;
+            return false ;
         }
 
         this.x += direccionEmpuje + RETROCESO_PIXELES;
@@ -113,7 +114,9 @@ private int spriteHeight = 70   ;
         if (vida <= 0) {
             estado = Estado.MUERTE;
             muerte.reiniciar();
+            return true;
         }
+        return false;
     }
 
     @Override
