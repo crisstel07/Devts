@@ -7,19 +7,19 @@ import java.io.IOException;
 import Main.Jugador;
 import Enemigos.*;
 
-public class Dia extends EscenarioBase {
+public class Muerte extends EscenarioBase {
     private BufferedImage fondo;
     private Suelo suelo;
     private int repeticionesInternas;
     private Jugador jugador;
 
-    public Dia(int repeticiones, Jugador jugador) {
+    public Muerte(int repeticiones, Jugador jugador) {
         this.repeticiones = repeticiones;
         this.repeticionesInternas = repeticiones;
         this.jugador = jugador;
 
         try {
-            fondo = ImageIO.read(getClass().getResource("/Graficos/FondoDia.png"));
+            fondo = ImageIO.read(getClass().getResource("/Graficos/fondotrendia.png"));
             anchoFondo = fondo.getWidth();
             altoFondo = fondo.getHeight();
         } catch (IOException e) {

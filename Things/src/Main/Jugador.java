@@ -18,6 +18,14 @@ public class Jugador {
 
     private final int ANCHO = 120;
     private final int ALTO = 130;
+    
+    //PRUEBAS
+    private boolean estaMuerto = false;
+private boolean animacionMuerteTerminada = false;
+private int frameMuerteActual = 0;
+private int totalFramesMuerte = 10; // o lo que dure tu animación
+
+    
 
     // ============================================================
     // 🟣 2. ESTADO DEL JUGADOR
@@ -31,7 +39,17 @@ public class Jugador {
         DAÑADO,
         MUERTO,
         RENACIENDO
+        
+        
     }
+        
+    public enum EstadoJuego {
+    JUGANDO,
+    MURIENDO,
+    FADE_OUT,
+    REINICIANDO
+}
+
 
     private Estado estado = Estado.IDLE;
 
@@ -40,7 +58,7 @@ public class Jugador {
     // ============================================================
     // 🟣 3. VIDA Y DAÑO
     // ============================================================
-    private int vida = 5;
+   
     private boolean invulnerable = false;
     private int timerInvulnerable = 0;
 
@@ -59,7 +77,7 @@ public class Jugador {
     private BufferedImage[] gatosRecuperarSprites;
 
 // Estados
-    private int vidas = 5;
+    private int vidas = 2;
 
     private Animacion gatosIdleAnim;
     private Animacion gatosPerderAnim;
@@ -102,6 +120,8 @@ public class Jugador {
     private Animacion ataqueArribaAnim;
     private Animacion ataqueAbajoAnim;
     private Animacion ataqueActualAnim = null;
+    
+    
 
     // Parámetros para dibujar el ataque
     private final double ESCALA_ATAQUE = 0.4;
@@ -206,10 +226,13 @@ public class Jugador {
      */
     public void actualizar(boolean izquierda, boolean derecha, boolean arriba, boolean abajo, boolean atacar, boolean saltar, int limiteEscenario) {
 
-        if (estado == Estado.MUERTO) {
-            muerteAnim.actualizar();
-            return;
-        }
+      
+    
+
+
+
+
+
 
         // ---------------------------
         // ESTADO: DAÑADO
@@ -396,7 +419,7 @@ public class Jugador {
 
         if (vidas <= 0 && estado != Estado.MUERTO) {
     estado = Estado.MUERTO;
-    muerteAnim.reiniciar();
+    muerteAnim.actualizar();
 }
 
         
@@ -429,6 +452,16 @@ public class Jugador {
         timerInvulnerable = DURACION_INVULNERABLE_DEFAULT;
         retrocesoX = direccionEmpuje;
     }
+    
+    public void morir() {
+    if (!estaMuerto) {
+        estaMuerto = true;
+        animacionMuerteTerminada = false;
+        muerteAnim.reiniciar();
+    }
+}
+
+
 
     //GANAS PARA FASES LUNARES
     public void ganarFaseLunar() {
@@ -490,7 +523,6 @@ public class Jugador {
     public void renacer() {
         if (estado == Estado.MUERTO) {
             estado = Estado.RENACIENDO;
-            vida = VIDA_MAXIMA;
             vidas = VIDA_MAXIMA;
             fasesLunares = 1;
             x = 50;
@@ -570,6 +602,18 @@ public class Jugador {
         int offsetDibujoX = 0;
         int offsetDibujoY = 0;
 
+        
+        if (estaMuerto) {
+            BufferedImage frameMuerte = muerteAnim.getFrameActual();
+      int OffsetXMuerte =0;
+      int OffsetYMuerte =0;
+      int drawX = x - camaraX + OffsetXMuerte;
+     int drawY = y + OffsetYMuerte;
+    // Suponiendo que tienes un arreglo de imágenes de muerteAnim
+   g2.drawImage(frameMuerte, drawX, drawY, -ANCHO, ALTO, null);
+    return;
+}
+
         // ---------------------------
         // SELECCIÓN DEL FRAME
         // ---------------------------
@@ -578,6 +622,8 @@ public class Jugador {
     int drawX = x - camaraX + curacionOffsetX;
     int drawY = y + curacionOffsetY;
 
+    
+    
     if (!mirandoDerecha) {
         drawX += ANCHO;
         g2.drawImage(frameCuracion, drawX, drawY, -ANCHO, ALTO, null);
@@ -647,6 +693,11 @@ public class Jugador {
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
             }
         }
+        if (estaMuerto) {
+    g.drawImage(muerteAnim.getFrameActual(), x, y, null);
+    return;
+}
+
 
         dibujarHUD(g2);
     }
@@ -694,7 +745,7 @@ public class Jugador {
     }
 
     public int getVida() {
-        return vida;
+        return vidas;
     }
 
     public boolean estaAtacando() {
