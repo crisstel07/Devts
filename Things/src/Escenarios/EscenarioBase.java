@@ -12,7 +12,7 @@ public abstract class EscenarioBase {
     protected int altoFondo;
     protected Suelo suelo;
 
-    protected  final List<EnemigoBase> enemigos = new ArrayList<>();
+    public  final List<EnemigoBase> enemigos = new ArrayList<>();
     private List<EnemigoBase> enemigosPendientes = new ArrayList<>();
 
     public List<EnemigoBase> getEnemigos() {
@@ -25,6 +25,7 @@ public abstract class EscenarioBase {
         return repeticiones * anchoFondo;
     }
 
+    
     public abstract void dibujarFondo(Graphics g, int camaraX, int anchoVentana, int altoVentana);
 
     public abstract void dibujarElementos(Graphics g, int camaraX);
@@ -61,4 +62,8 @@ public abstract class EscenarioBase {
         }
     }
 }
+    public boolean permiteSalida() {
+    return true;
+}
+
 }

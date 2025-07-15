@@ -67,10 +67,11 @@ public class Fargano extends EnemigoBase {
 
     @Override
     public void actualizar() {
-        if (!vivo) return;
+      
 
         if (estado == Estado.MUERTO) {
             animMuerte.actualizar();
+            
 
             // Aquí generamos al Farg mientras está la animación de muerte
             if (!fargGenerado && animMuerte.getFrameActualIndex() >= animMuerte.getCantidadFrames() / 2) {

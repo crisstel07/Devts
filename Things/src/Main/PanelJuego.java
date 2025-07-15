@@ -15,8 +15,11 @@ public class PanelJuego extends JPanel implements Runnable {
     public static final int ALTO = 767;
 
     private Thread gameThread;
-
+private static PanelJuego instanciaGlobal;
+public static int nivelPrevioAntesDeMuerte;
     private Jugador.EstadoJuego estadoJuego = Jugador.EstadoJuego.JUGANDO;
+    private int nivelReintentoDestino = 0;
+private boolean enTransicionReintento = false;
 
     // Escenarios
     private java.util.List<EscenarioBase> niveles;
@@ -24,17 +27,13 @@ public class PanelJuego extends JPanel implements Runnable {
     private EscenarioBase escenario;
 
     // Transiciones
-   
     private boolean faseFadeOut = true;
     private int opacidadTransicion = 0;
-    
+
     private boolean enTransicionNivel = false;
-private boolean enTransicionMuerte = false;
+    private boolean enTransicionMuerte = false;
     
-
     //Estados
-  
-
     // Cámara
     private int camaraX = 0;
     private int anchoEscenario;
@@ -53,6 +52,7 @@ private boolean enTransicionMuerte = false;
 
     //CONSTRUCTOR
     public PanelJuego() {
+        instanciaGlobal = this;
         this.setPreferredSize(new Dimension(ANCHO, ALTO));
         this.setBackground(Color.WHITE);
         this.setDoubleBuffered(true);
@@ -67,7 +67,7 @@ private boolean enTransicionMuerte = false;
         niveles.add(new Dia(1, jugador));
         niveles.add(new Noche(1, jugador));
         niveles.add(new NocheOjos(1, jugador));
-        niveles.add(new Muerte(1,jugador));
+        niveles.add(new Muerte(1, jugador));
 
         nivelActual = 0;
         escenario = niveles.get(nivelActual);
@@ -102,77 +102,111 @@ private boolean enTransicionMuerte = false;
                 delta--;
             }
         }
+        
     }
-private void iniciarTransicionNivel() {
-    enTransicionNivel = true;
+    
+    public void limpiarEntrada() {
+    teclado.resetear();
+}
+    
+public static void cambiarNivelEstatico(int nuevoNivel) {
+    if (instanciaGlobal != null) {
+        instanciaGlobal.cambiarANivel(nuevoNivel);
+    }
+}
+private void resetearTransiciones() {
+    enTransicionNivel = false;
+    enTransicionMuerte = false;
+    enTransicionReintento = false;
+    
+}
+
+private void cambiarANivel(int nuevoNivel) {
+    nivelActual = nuevoNivel;
+    escenario = niveles.get(nivelActual);
+    anchoEscenario = escenario.getAnchoTotal();
+    jugador.reiniciar();
+    limpiarEntrada();
+    resetearTransiciones();
+}
+
+
+public static void iniciarTransicionReintentoEstatico(int nivelDestino) {
+    if (instanciaGlobal != null) {
+        instanciaGlobal.iniciarTransicionReintento(nivelDestino);
+    }
+}
+private void iniciarTransicionReintento(int nivelDestino) {
+    resetearTransiciones();
+    nivelReintentoDestino = nivelDestino;
+    faseFadeOut = true;
+    enTransicionReintento = true;
+}
+private void iniciarFade() {
     faseFadeOut = true;
     opacidadTransicion = 0;
 }
 
-private void iniciarTransicionMuerte() {
-    enTransicionMuerte = true;
-    faseFadeOut = true;
-    opacidadTransicion = 0;
-}
-    //MANEJAR TRANSICIONES 
-    private void iniciarTransicion() {
+
+    private void iniciarTransicionNivel() {
+        enTransicionNivel = true;
+        iniciarFade();
+    }
+
+    private void iniciarTransicionMuerte() {
+        enTransicionMuerte = true;
+        iniciarFade();
+
+    }
+
+ 
+
+    private void cambiarANivelSiguiente() {
         if (nivelActual + 1 < niveles.size()) {
             nivelActual++;
             escenario = niveles.get(nivelActual);
             anchoEscenario = escenario.getAnchoTotal();
+            jugador.resetearPosicion();
 
-            
-
-            faseFadeOut = false;
-            
-            opacidadTransicion = 255;
+            System.out.println("Nivel cambiado a: " + nivelActual);
+            resetearTransiciones();
         } else {
             System.out.println("¡Fin del juego o niveles!");
         }
+
+        enTransicionNivel = false;
     }
-    
-private void cambiarANivelSiguiente() {
-    if (nivelActual + 1 < niveles.size()) {
-        nivelActual++;
+
+    private void cambiarANivelMuerte() {
+          nivelPrevioAntesDeMuerte = nivelActual;
+        nivelActual = 3;  // índice de tu escenario Muerte
         escenario = niveles.get(nivelActual);
         anchoEscenario = escenario.getAnchoTotal();
-        jugador.resetearPosicion();
-        jugador.renacer();
+  jugador.x=650;      
+  jugador.renacer();
+  limpiarEntrada();
+  resetearTransiciones();
+  
 
-        System.out.println("Nivel cambiado a: " + nivelActual);
-    } else {
-        System.out.println("¡Fin del juego o niveles!");
+        System.out.println("Jugador murió. Nivel cambiado a: Muerte");
+
     }
-
-    enTransicionNivel = false;
-}
-   private void cambiarANivelMuerte() {
-    nivelActual = 3;  // índice de tu escenario Muerte
-    escenario = niveles.get(nivelActual);
-    anchoEscenario = escenario.getAnchoTotal();
-    jugador.resetearPosicion();
-   
-
-    System.out.println("Jugador murió. Nivel cambiado a: Muerte");
-
-    enTransicionMuerte = false;
-}
 
     // ACTUALIZAR LOGICA DEL JUEGO
     public void actualizar() {
 
         // ✅ Verificar muerte del jugador
-        if (jugador.estaMuerto()) {
+        if (jugador.estaMuerto()&&nivelActual !=3) {
             jugador.actualizar(false, false, false, false, false, false, anchoEscenario + 300);
 
             // Esperar que termine animación de muerte y reiniciar
             if (jugador.animacionMuerteTerminada() && !enTransicionMuerte && !enTransicionNivel && opacidadTransicion == 0) {
-    iniciarTransicionMuerte();
-}
+                iniciarTransicionMuerte();
+            }
 
         }
 
-if (faseFadeOut) {
+      if (faseFadeOut) {
     opacidadTransicion += 5;
     if (opacidadTransicion >= 255) {
         opacidadTransicion = 255;
@@ -182,11 +216,15 @@ if (faseFadeOut) {
             cambiarANivelSiguiente();
         } else if (enTransicionMuerte) {
             cambiarANivelMuerte();
+        } else if (enTransicionReintento) {
+            cambiarANivel(nivelReintentoDestino);
+            enTransicionReintento = false;
         }
     }
 } else if (opacidadTransicion > 0) {
     opacidadTransicion -= 5;
 }
+
 
         // Manejo de curación
         if (teclado.curar) {
@@ -207,15 +245,14 @@ if (faseFadeOut) {
         );
 
         // ✅ Manejar transiciones de nivel
-        
-
         // ✅ Ajustar la cámara
         actualizarCamara();
 
         // ✅ Cambiar de nivel si llegó al final
-       if (jugador.getX() >= anchoEscenario + 100 && !enTransicionNivel && !enTransicionMuerte) {
+        if (jugador.getX() >= anchoEscenario + 100 && !enTransicionNivel && !enTransicionMuerte && escenario.permiteSalida()) {
     iniciarTransicionNivel();
 }
+
 
         // ✅ Actualizar enemigos
         escenario.actualizarEnemigos();
@@ -247,28 +284,6 @@ if (faseFadeOut) {
         mostrarHitboxes = teclado.mostrarHitbox;
     }
 
-    void reiniciarNivelCompleto() {
-        // Reinicia el nivel actual
-        escenario = niveles.get(nivelActual); // O como sea tu constructor de nivel actual
-        jugador.renacer();        // Este ya resetea vidas, fases, posición
-    }
-
-    private void actualizarTransicion() {
-        if (faseFadeOut) {
-            opacidadTransicion += 2;
-            if (opacidadTransicion >= 255) {
-                opacidadTransicion = 255;
-                iniciarTransicion();
-
-            }
-        } else {
-            opacidadTransicion -= 2;
-            if (opacidadTransicion <= 0) {
-                opacidadTransicion = 0;
-               
-            }
-        }
-    }
 
     private void actualizarCamara() {
         int mitadPantalla = ANCHO / 2;
@@ -397,17 +412,15 @@ if (faseFadeOut) {
 
         escenario.dibujarElementos(g, camaraX);
 
-    
-
         escenario.dibujarEnemigos(g, camaraX);
         for (ParticulasGolpe p : particulasGolpe) {
             p.dibujar(g, camaraX);
         }
-if (faseFadeOut || opacidadTransicion > 0) {
-    Graphics2D g2 = (Graphics2D) g;
-    g2.setColor(new Color(0, 0, 0, opacidadTransicion));
-    g2.fillRect(0, 0, ANCHO, ALTO);
-}
+        if (faseFadeOut || opacidadTransicion > 0) {
+            Graphics2D g2 = (Graphics2D) g;
+            g2.setColor(new Color(0, 0, 0, opacidadTransicion));
+            g2.fillRect(0, 0, ANCHO, ALTO);
+        }
         //MOSTRAR LAS HITBOX CON P
         if (mostrarHitboxes) {
             // HITBOX DEL JUGADOR

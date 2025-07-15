@@ -70,5 +70,15 @@ public boolean curar = false;
 
 
     }
+    public void resetear() {
+    izquierda = false;
+    derecha = false;
+    arriba = false;
+    abajo = false;
+    saltar = false;
+    curar = false;
+    saltar=false;
+}
+
 
 }

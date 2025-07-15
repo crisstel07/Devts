@@ -12,20 +12,14 @@ public class Jugador {
     // ============================================================
     // 🟣 1. POSICIÓN Y MOVIMIENTO BÁSICO
     // ============================================================
-    private int x, y;
+    public int x, y;
     private int velocidadX = 0;
     private int velocidadY = 0;
 
     private final int ANCHO = 120;
     private final int ALTO = 130;
-    
-    //PRUEBAS
-    private boolean estaMuerto = false;
-private boolean animacionMuerteTerminada = false;
-private int frameMuerteActual = 0;
-private int totalFramesMuerte = 10; // o lo que dure tu animación
 
-    
+  
 
     // ============================================================
     // 🟣 2. ESTADO DEL JUGADOR
@@ -39,17 +33,15 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
         DAÑADO,
         MUERTO,
         RENACIENDO
-        
-        
-    }
-        
-    public enum EstadoJuego {
-    JUGANDO,
-    MURIENDO,
-    FADE_OUT,
-    REINICIANDO
-}
 
+    }
+
+    public enum EstadoJuego {
+        JUGANDO,
+        MURIENDO,
+        FADE_OUT,
+        REINICIANDO
+    }
 
     private Estado estado = Estado.IDLE;
 
@@ -58,7 +50,6 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
     // ============================================================
     // 🟣 3. VIDA Y DAÑO
     // ============================================================
-   
     private boolean invulnerable = false;
     private int timerInvulnerable = 0;
 
@@ -120,8 +111,6 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
     private Animacion ataqueArribaAnim;
     private Animacion ataqueAbajoAnim;
     private Animacion ataqueActualAnim = null;
-    
-    
 
     // Parámetros para dibujar el ataque
     private final double ESCALA_ATAQUE = 0.4;
@@ -147,7 +136,7 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
     // ============================================================
 // 🟣 7.5 FASES LUNARES
 // ============================================================
-    private final int VIDA_MAXIMA = 5;
+    private final int VIDA_MAXIMA = 10;
 
     // ============================================================
     // 🟣 8. CONSTRUCTOR
@@ -162,6 +151,46 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
             e.printStackTrace();
         }
     }
+public void reiniciar() {
+    this.x = 100;
+    this.y = SUELO_Y;
+    this.vidas = VIDA_MAXIMA;
+    this.fasesLunares = 1;
+    this.estado = Estado.IDLE;
+    
+    invulnerable = false;
+    estaAtacando = false;
+    cargandoCuracion = false;
+    enSuelo = true;
+    mirandoDerecha = true;
+
+    velocidadX = 0;
+    velocidadY = 0;
+    retrocesoX = 0;
+
+    animandoPerderVida = false;
+    animandoRecuperarVida = false;
+
+    blinkTimer = 0;
+    timerInvulnerable = 0;
+
+    // Reiniciar animaciones
+    if (muerteAnim != null) muerteAnim.reiniciar();
+    if (idleAnim != null) idleAnim.reiniciar();
+    if (caminarAnim != null) caminarAnim.reiniciar();
+    if (saltoAnim != null) saltoAnim.reiniciar();
+    if (ataqueNormalAnim != null) ataqueNormalAnim.reiniciar();
+    if (ataqueArribaAnim != null) ataqueArribaAnim.reiniciar();
+    if (ataqueAbajoAnim != null) ataqueAbajoAnim.reiniciar();
+    if (danoAnim != null) danoAnim.reiniciar();
+    if (curacionAnim != null) curacionAnim.reiniciar();
+    if (renacerAnim != null) renacerAnim.reiniciar();
+
+    if (gatosIdleAnim != null) gatosIdleAnim.reiniciar();
+    if (gatosPerderAnim != null) gatosPerderAnim.reiniciar();
+    if (gatosRecuperarAnim != null) gatosRecuperarAnim.reiniciar();
+}
+
 
     // ============================================================
     // 🟣 9. CARGA DE ANIMACIONES
@@ -225,14 +254,6 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
      * Actualiza la lógica del jugador
      */
     public void actualizar(boolean izquierda, boolean derecha, boolean arriba, boolean abajo, boolean atacar, boolean saltar, int limiteEscenario) {
-
-      
-    
-
-
-
-
-
 
         // ---------------------------
         // ESTADO: DAÑADO
@@ -418,11 +439,10 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
         gatosIdleAnim.actualizar();
 
         if (vidas <= 0 && estado != Estado.MUERTO) {
-    estado = Estado.MUERTO;
-    muerteAnim.actualizar();
-}
+            estado = Estado.MUERTO;
+            muerteAnim.actualizar();
+        }
 
-        
     }
 
     private Estado IDLEorWalk(boolean izquierda, boolean derecha) {
@@ -452,16 +472,8 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
         timerInvulnerable = DURACION_INVULNERABLE_DEFAULT;
         retrocesoX = direccionEmpuje;
     }
-    
-    public void morir() {
-    if (!estaMuerto) {
-        estaMuerto = true;
-        animacionMuerteTerminada = false;
-        muerteAnim.reiniciar();
-    }
-}
 
-
+  
 
     //GANAS PARA FASES LUNARES
     public void ganarFaseLunar() {
@@ -492,12 +504,11 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
     }
 
     public void comenzarCuracion() {
-    if (!cargandoCuracion && fasesLunares >= 3 && vidas < VIDA_MAXIMA && estado == Estado.IDLE) {
-        cargandoCuracion = true;
-        curacionAnim.reiniciar();
+        if (!cargandoCuracion && fasesLunares >= 3 && vidas < VIDA_MAXIMA && estado == Estado.IDLE) {
+            cargandoCuracion = true;
+            curacionAnim.reiniciar();
+        }
     }
-}
-
 
     public void cancelarCuracion() {
         if (cargandoCuracion) {
@@ -521,17 +532,12 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
     }
 
     public void renacer() {
-        if (estado == Estado.MUERTO) {
-            estado = Estado.RENACIENDO;
-            vidas = VIDA_MAXIMA;
-            fasesLunares = 1;
-            x = 50;
-            y = SUELO_Y;
-            invulnerable = false;
-            retrocesoX = 0;
-            renacerAnim.reiniciar();
-            // Aquí puedes reiniciar otras animaciones o estados si quieres
+        if (muerteAnim.estaTerminada()) {
+            estado = estado.RENACIENDO;
+            renacerAnim.actualizar();
         }
+        // Aquí puedes reiniciar otras animaciones o estados si quieres
+
     }
 
     // ============================================================
@@ -602,36 +608,23 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
         int offsetDibujoX = 0;
         int offsetDibujoY = 0;
 
-        
-        if (estaMuerto) {
-            BufferedImage frameMuerte = muerteAnim.getFrameActual();
-      int OffsetXMuerte =0;
-      int OffsetYMuerte =0;
-      int drawX = x - camaraX + OffsetXMuerte;
-     int drawY = y + OffsetYMuerte;
-    // Suponiendo que tienes un arreglo de imágenes de muerteAnim
-   g2.drawImage(frameMuerte, drawX, drawY, -ANCHO, ALTO, null);
-    return;
-}
-
         // ---------------------------
         // SELECCIÓN DEL FRAME
         // ---------------------------
-       if (cargandoCuracion) {
-    BufferedImage frameCuracion = curacionAnim.getFrameActual();
-    int drawX = x - camaraX + curacionOffsetX;
-    int drawY = y + curacionOffsetY;
+        if (cargandoCuracion) {
+            BufferedImage frameCuracion = curacionAnim.getFrameActual();
+            int drawX = x - camaraX + curacionOffsetX;
+            int drawY = y + curacionOffsetY;
+            dibujarHUD(g2);
 
-    
-    
-    if (!mirandoDerecha) {
-        drawX += ANCHO;
-        g2.drawImage(frameCuracion, drawX, drawY, -ANCHO, ALTO, null);
-    } else {
-        g2.drawImage(frameCuracion, drawX, drawY, ANCHO, ALTO, null);
-    }
-    return;
-}
+            if (!mirandoDerecha) {
+                drawX += ANCHO;
+                g2.drawImage(frameCuracion, drawX, drawY, -ANCHO, ALTO, null);
+            } else {
+                g2.drawImage(frameCuracion, drawX, drawY, ANCHO, ALTO, null);
+            }
+            return;
+        }
 
         if (estado == Estado.DAÑADO) {
             frameBase = danoAnim.getFrameActual();
@@ -649,20 +642,21 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
                 offsetDibujoY = OFFSET_DIBUJO_ATAQUE_Y;
             }
         } else {
-    frameBase = switch (estado) {
-        case IDLE ->
-            idleAnim.getFrameActual();
-        case CAMINANDO_DERECHA, CAMINANDO_IZQUIERDA ->
-            caminarAnim.getFrameActual();
-        case SALTANDO, ATERRIZANDO ->
-            saltoAnim.getFrameActual();
-        case MUERTO ->
-            muerteAnim.getFrameActual();
-        default ->
-            null;
-    };
-}
-
+            frameBase = switch (estado) {
+                case IDLE ->
+                    idleAnim.getFrameActual();
+                case CAMINANDO_DERECHA, CAMINANDO_IZQUIERDA ->
+                    caminarAnim.getFrameActual();
+                case SALTANDO, ATERRIZANDO ->
+                    saltoAnim.getFrameActual();
+                case MUERTO ->
+                    muerteAnim.getFrameActual();
+                case RENACIENDO ->
+                    renacerAnim.getFrameActual();
+                default ->
+                    null;
+            };
+        }
 
         // ---------------------------
         // DIBUJO FINAL
@@ -693,11 +687,8 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
             }
         }
-        if (estaMuerto) {
-    g.drawImage(muerteAnim.getFrameActual(), x, y, null);
-    return;
-}
-
+       
+        
 
         dibujarHUD(g2);
     }
@@ -772,7 +763,7 @@ private int totalFramesMuerte = 10; // o lo que dure tu animación
         } else {
             vidas = 0;
             estado = Estado.MUERTO;
-            muerteAnim.reiniciar();
+          
             // Aquí deshabilitas input en tu controlador o en PanelJuego
         }
     }
