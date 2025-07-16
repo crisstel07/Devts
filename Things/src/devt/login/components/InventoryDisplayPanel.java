@@ -1,4 +1,3 @@
-
 package devt.login.components;
 
 import javax.swing.*;
@@ -13,7 +12,9 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonElement; // Importar JsonElement para iterar
 import java.io.IOException;
+import java.io.File; // Importar File para cargar desde ruta absoluta si aplica
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,7 +39,7 @@ public class InventoryDisplayPanel extends JPanel {
     public InventoryDisplayPanel() {
         this.inventorySlotDetails = new HashMap<>();
         // El panel principal usará un BorderLayout para contener el JSplitPane
-        setLayout(new BorderLayout()); 
+        setLayout(new BorderLayout());
         
         setBackground(new Color(40, 40, 40));
         setBorder(BorderFactory.createCompoundBorder(
@@ -150,7 +151,12 @@ public class InventoryDisplayPanel extends JPanel {
         add(mainSplitPane, BorderLayout.CENTER);
     }
 
-    public void loadInventoryData(JsonObject inventoryData) {
+    /**
+     * Carga los datos del inventario en la interfaz de usuario.
+     * @param inventoryData Un JsonArray que contiene los ítems del inventario.
+     */
+    public void loadInventoryData(JsonArray inventoryData) { // <--- CAMBIO AQUÍ: Ahora espera un JsonArray directamente
+        // Limpiar todos los slots primero
         for (JLabel slot : itemSlots) {
             slot.setIcon(null);
             slot.setText("");
@@ -159,20 +165,30 @@ public class InventoryDisplayPanel extends JPanel {
         inventorySlotDetails.clear();
         clearItemInfo();
 
-        if (inventoryData != null && inventoryData.has("inventory") && inventoryData.get("inventory").isJsonArray()) {
-            JsonArray inventoryArray = inventoryData.getAsJsonArray("inventory");
-            for (int i = 0; i < inventoryArray.size(); i++) {
-                JsonObject itemEntry = inventoryArray.get(i).getAsJsonObject();
+        if (inventoryData != null) { // inventoryData ahora es directamente el JsonArray
+            for (int i = 0; i < inventoryData.size(); i++) {
+                JsonElement element = inventoryData.get(i); // Obtener JsonElement
+                if (!element.isJsonObject()) {
+                    System.err.println("Error: El elemento en el inventario no es un JsonObject válido: " + element);
+                    continue; // Saltar este elemento y continuar con el siguiente
+                }
+                JsonObject itemEntry = element.getAsJsonObject();
+
+                if (!itemEntry.has("slot") || !itemEntry.has("cantidad") || !itemEntry.has("item_details")) {
+                     System.err.println("Error: Objeto de ítem incompleto en el inventario: " + itemEntry);
+                     continue;
+                }
+
                 int slotNumber = itemEntry.get("slot").getAsInt();
                 int quantity = itemEntry.get("cantidad").getAsInt();
                 JsonObject itemDetails = itemEntry.getAsJsonObject("item_details");
 
                 if (slotNumber >= 1 && slotNumber <= 9) {
-                    inventorySlotDetails.put(slotNumber, itemEntry);
+                    inventorySlotDetails.put(slotNumber, itemEntry); // Guardar el JsonObject completo de la entrada
                     JLabel targetSlot = itemSlots[slotNumber - 1];
 
                     String iconUrl = itemDetails.has("icono_url") && !itemDetails.get("icono_url").isJsonNull()
-                                     ? itemDetails.get("icono_url").getAsString() : "";
+                                         ? itemDetails.get("icono_url").getAsString() : "";
                     loadImage(iconUrl, targetSlot, 60, 60);
 
                     if (itemDetails.has("apilable") && itemDetails.get("apilable").getAsBoolean() && quantity > 1) {
@@ -182,9 +198,11 @@ public class InventoryDisplayPanel extends JPanel {
                         targetSlot.setForeground(Color.WHITE);
                         targetSlot.setFont(new Font("Arial", Font.BOLD, 12));
                     } else {
-                        targetSlot.setText("");
+                        targetSlot.setText(""); // Si no es apilable o cantidad 1, no mostrar "x1"
                     }
                     targetSlot.setBackground(new Color(80, 80, 80));
+                } else {
+                    System.err.println("Advertencia: Slot " + slotNumber + " fuera de rango (1-9).");
                 }
             }
         }
@@ -206,7 +224,7 @@ public class InventoryDisplayPanel extends JPanel {
             infoItemCount.setText("Cantidad: " + quantity);
             
             String iconUrl = itemDetails.has("icono_url") && !itemDetails.get("icono_url").isJsonNull()
-                                     ? itemDetails.get("icono_url").getAsString() : "";
+                                 ? itemDetails.get("icono_url").getAsString() : "";
             loadImage(iconUrl, infoItemIcon, 64, 64);
         } else {
             clearItemInfo();
@@ -228,11 +246,21 @@ public class InventoryDisplayPanel extends JPanel {
             return;
         }
         try {
-            URL url;
+            URL url = null;
+            // Intenta cargar como recurso interno del JAR (si empieza con '/')
             if (imageUrl.startsWith("/")) {
                 url = getClass().getResource(imageUrl);
             } else {
-                url = new URL(imageUrl);
+                // Intenta cargar como URL externa (si es una URL completa)
+                try {
+                    url = new URL(imageUrl);
+                } catch (java.net.MalformedURLException e) {
+                    // Si no es una URL válida, intenta como archivo local absoluto
+                    File imageFile = new File(imageUrl);
+                    if (imageFile.exists() && imageFile.isFile()) {
+                        url = imageFile.toURI().toURL(); // Convertir File a URL
+                    }
+                }
             }
 
             if (url != null) {
@@ -242,13 +270,20 @@ public class InventoryDisplayPanel extends JPanel {
                     targetLabel.setIcon(new ImageIcon(scaledImg));
                 } else {
                     targetLabel.setIcon(null);
+                    System.err.println("No se pudo leer la imagen desde: " + url);
                 }
             } else {
                 targetLabel.setIcon(null);
+                System.err.println("No se pudo resolver la URL/ruta de la imagen: " + imageUrl);
             }
         } catch (IOException e) {
-            System.err.println("Error al cargar imagen " + imageUrl + ": " + e.getMessage());
+            System.err.println("Error de E/S al cargar imagen " + imageUrl + ": " + e.getMessage());
             targetLabel.setIcon(null);
+            e.printStackTrace();
+        } catch (Exception e) { // Capturar cualquier otra excepción
+            System.err.println("Error inesperado al cargar imagen " + imageUrl + ": " + e.getMessage());
+            targetLabel.setIcon(null);
+            e.printStackTrace();
         }
     }
 }

@@ -1,4 +1,3 @@
-
 package devt.login.components;
 
 import java.awt.AlphaComposite;
@@ -7,9 +6,16 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+import javax.swing.JTextField;
+import devt.login.swing.MyTextField;
+import devt.login.swing.ButtonOutLine;
 
 
 public class PanelVerifyCode extends javax.swing.JPanel {
+
+    private String emailForVerification; // Atributo para almacenar el email
 
     public PanelVerifyCode() {
         initComponents();
@@ -17,9 +23,9 @@ public class PanelVerifyCode extends javax.swing.JPanel {
         setFocusCycleRoot(true);
         super.setVisible(false);
         addMouseListener(new MouseAdapter() {
-        });  
+        });
     }
-  
+    
     @Override
     public void setVisible(boolean bln) {
         super.setVisible(bln);
@@ -28,6 +34,7 @@ public class PanelVerifyCode extends javax.swing.JPanel {
             txtCode.setText("");
         }
     }
+
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -139,24 +146,58 @@ public class PanelVerifyCode extends javax.swing.JPanel {
     setVisible(false);
     }//GEN-LAST:event_cmdCancelActionPerformed
 
+   
     @Override
     protected void paintComponent(Graphics grphcs) {
-         Graphics2D g2 = (Graphics2D) grphcs;
+        Graphics2D g2 = (Graphics2D) grphcs;
         g2.setColor(new Color(50, 50, 50 ));
         g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
         g2.fillRect(0, 0, getWidth(), getHeight());
         g2.setComposite(AlphaComposite.SrcOver);
-        super.paintComponent(grphcs); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/OverriddenMethodBody
+        super.paintComponent(grphcs);
     }
+    
+    /**
+     * Obtiene el código de verificación ingresado por el usuario.
+     * @return El código de verificación.
+     */
     public String getInputCode() {
         return txtCode.getText().trim();
+    }
+
+    /**
+     * Obtiene el correo electrónico almacenado para la verificación.
+     * @return El correo electrónico.
+     */
+    public String getEmail() {
+        return emailForVerification;
+    }
+
+    /**
+     * Establece el correo electrónico que se utilizará para la verificación.
+     * @param email El correo electrónico a almacenar.
+     */
+    public void setEmail(String email) {
+        this.emailForVerification = email;
     }
 
     public void addEventButtonOK(ActionListener event) {
         cmdOK.addActionListener(event);
     }
     
+    public void addCancelButtonListener(ActionListener event) {
+        cmdCancel.addActionListener(event);
+    }
     
+    /**
+     * Limpia los campos de entrada del código de verificación y el email almacenado.
+     */
+    public void clearFields() {
+        if (txtCode != null) {
+            txtCode.setText("");
+        }
+        this.emailForVerification = null;
+    }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private devt.login.swing.ButtonOutLine cmdCancel;
     private devt.login.swing.ButtonOutLine cmdOK;

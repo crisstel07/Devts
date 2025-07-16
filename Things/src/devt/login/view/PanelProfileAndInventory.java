@@ -14,24 +14,23 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import javax.imageio.ImageIO;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import devt.login.apiFlask.ApiClient;
 import devt.login.apiFlask.ApiClient.ApiResponse;
 import java.awt.image.BufferedImage;
 
 // Importar las nuevas clases de paneles de contenido
-// Asegúrate de que estas clases estén en el mismo paquete (devt.login.view)
-// o ajusta la importación si las colocas en otro subpaquete.
 import devt.login.components.ProfileStatsDisplayPanel;
 import devt.login.components.InventoryDisplayPanel;
 import devt.login.components.EnemiesDefeatedDisplayPanel;
 
+
 public class PanelProfileAndInventory extends javax.swing.JPanel {
 
     // --- Datos del Usuario y Personaje ---
-    private JsonObject currentUserData;
+    private JsonObject currentUserData; // Ahora contendrá la foto_perfil_url del usuario
     private JsonObject currentCharacterData;
-    // currentInventoryData ya no se mantiene aquí directamente, se pasa al sub-panel
-    // private JsonObject currentInventoryData; 
 
     // --- Componentes del Panel Izquierdo (Perfil Básico) ---
     private JLabel lblProfilePicture;
@@ -56,11 +55,35 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
 
     // --- ID del personaje actual ---
     private Integer characterId;
+    // --- ID del usuario actual ---
+    private Integer userId; // Nuevo: Para manejar la foto de perfil del usuario
+
+    // --- Botón de Volver ---
+    private JButton btnBackToMainMenu;
+
+    // Listener para el botón de volver al menú principal
+    private ActionListener backToMenuListener;
+
+    // Ruta base para las imágenes de perfil de usuario (en el sistema de archivos)
+    private static final String USER_PROFILE_IMAGES_DIR;
+    static {
+        // Obtiene el directorio de inicio del usuario y crea una carpeta oculta para la aplicación
+        String userHome = System.getProperty("user.home");
+        USER_PROFILE_IMAGES_DIR = userHome + File.separator + ".veilwalker" + File.separator + "profile_images" + File.separator;
+        // Asegúrate de que el directorio exista al iniciar la aplicación
+        new File(USER_PROFILE_IMAGES_DIR).mkdirs();
+    }
+
 
     public PanelProfileAndInventory(JsonObject userDataFromLogin) {
         this.currentUserData = userDataFromLogin;
-        // inventorySlotDetails ya no es necesario aquí, se mueve a InventoryDisplayPanel
-        // this.inventorySlotDetails = new HashMap<>(); 
+        
+        // Obtener el ID del usuario al inicializar
+        if (currentUserData != null && currentUserData.has("id") && !currentUserData.get("id").isJsonNull()) {
+            this.userId = currentUserData.get("id").getAsInt();
+        } else {
+            this.userId = null;
+        }
         
         setLayout(new BorderLayout(20, 20));
         setBackground(new Color(20, 20, 20));
@@ -69,21 +92,19 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         initComponents();
     }
 
-    // Método para cargar los datos iniciales (llamado desde LoginBase)
-    public void loadData(JsonObject characterData, JsonObject inventoryData) {
+    // Método para cargar los datos iniciales (llamado desde LoginBase/ViewSystem)
+    public void loadData(JsonObject characterData) {
         this.currentCharacterData = characterData;
         
-        if (characterData != null && characterData.has("id")) {
+        if (characterData != null && characterData.has("id") && !characterData.get("id").isJsonNull()) {
             this.characterId = characterData.get("id").getAsInt();
+        } else {
+            this.characterId = null;
         }
 
-        // Actualizar la UI del panel de perfil básico
-        updateProfileUI();
+        updateProfileUI(); // Llama a updateProfileUI para cargar la foto del usuario y datos del personaje
 
-        // Cargar datos en los paneles de contenido dinámico
         profileStatsDisplayPanel.loadCharacterData(characterData);
-        inventoryDisplayPanel.loadInventoryData(inventoryData);
-        // enemiesDefeatedDisplayPanel.loadEnemiesDefeatedData(characterId); // Se cargará cuando se muestre el panel
     }
 
     private void initComponents() {
@@ -95,7 +116,7 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
                 new TitledBorder(new LineBorder(new Color(255, 215, 0), 2), "Perfil del Usuario", TitledBorder.LEFT, TitledBorder.TOP, new Font("Arial", Font.BOLD, 20), new Color(255, 215, 0)),
                 new EmptyBorder(20, 20, 20, 20)
         ));
-        personalDataPanel.setPreferredSize(new Dimension(350, 600)); // Ancho fijo para el panel izquierdo
+        personalDataPanel.setPreferredSize(new Dimension(350, 600));
 
         // Foto de perfil
         lblProfilePicture = new JLabel();
@@ -186,7 +207,7 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         personalDataPanel.add(btnLogout);
         personalDataPanel.add(Box.createVerticalStrut(10));
 
-        btnAddItemDebug = new JButton("Añadir Ítem (Debug)"); // Renombrado para claridad
+        btnAddItemDebug = new JButton("Añadir Ítem (Debug)");
         btnAddItemDebug.setBackground(new Color(50, 100, 200));
         btnAddItemDebug.setForeground(Color.WHITE);
         btnAddItemDebug.setFont(new Font("Arial", Font.PLAIN, 14));
@@ -194,16 +215,16 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         btnAddItemDebug.addActionListener(e -> addDebugItem());
         personalDataPanel.add(btnAddItemDebug);
 
-        add(personalDataPanel, BorderLayout.WEST); // Añadir el panel izquierdo al BorderLayout principal
+        add(personalDataPanel, BorderLayout.WEST);
 
         // --- Panel Derecho: Contenido Dinámico (Perfil/Inventario/Enemigos) ---
         JPanel mainGameContentPanel = new JPanel(new BorderLayout());
-        mainGameContentPanel.setOpaque(false); // Para que se vea el fondo del PanelProfileAndInventory
+        mainGameContentPanel.setOpaque(false);
 
         // Panel con CardLayout para las diferentes vistas
         cardLayout = new CardLayout();
         cardPanel = new JPanel(cardLayout);
-        cardPanel.setOpaque(false); // Importante para que los paneles internos manejen su propio fondo
+        cardPanel.setOpaque(false);
 
         // Inicializar los paneles de contenido
         profileStatsDisplayPanel = new ProfileStatsDisplayPanel();
@@ -220,7 +241,7 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         // Panel para los botones de navegación en la parte inferior
         JPanel navigationButtonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
         navigationButtonsPanel.setBackground(new Color(30, 30, 30));
-        navigationButtonsPanel.setBorder(new EmptyBorder(10, 0, 0, 0)); // Espacio superior
+        navigationButtonsPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
 
         JButton btnShowProfileStats = new JButton("Perfil & Progreso");
         JButton btnShowInventory = new JButton("Inventario");
@@ -258,50 +279,91 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         navigationButtonsPanel.add(btnShowInventory);
         navigationButtonsPanel.add(btnShowEnemies);
 
-        mainGameContentPanel.add(navigationButtonsPanel, BorderLayout.SOUTH); // Botones abajo
+        // --- Botón de Volver al Menú Principal en la navegación ---
+        btnBackToMainMenu = new JButton("Volver al Menú");
+        btnBackToMainMenu.setFont(buttonFont);
+        btnBackToMainMenu.setBackground(new Color(100, 50, 150));
+        btnBackToMainMenu.setForeground(Color.WHITE);
+        navigationButtonsPanel.add(btnBackToMainMenu);
+
+
+        mainGameContentPanel.add(navigationButtonsPanel, BorderLayout.SOUTH);
         mainGameContentPanel.setBorder(BorderFactory.createCompoundBorder(
             new TitledBorder(new LineBorder(new Color(0, 150, 255), 2), "Contenido del Juego", TitledBorder.LEFT, TitledBorder.TOP, new Font("Arial", Font.BOLD, 20), new Color(0, 150, 255)),
             new EmptyBorder(10, 10, 10, 10)
         ));
 
-        add(mainGameContentPanel, BorderLayout.CENTER); // Añadir el panel derecho al BorderLayout principal
+        add(mainGameContentPanel, BorderLayout.CENTER);
+
     }
 
     // --- Métodos de Carga y Actualización de Datos ---
     private void updateProfileUI() {
+        if (currentUserData != null) {
+            lblUsername.setText("Usuario: " + currentUserData.get("nombre_usuario").getAsString());
+            lblEmail.setText("Correo: " + currentUserData.get("correo").getAsString());
+            
+            // Obtener la URL de la foto de perfil del USUARIO
+            String photoUrl = currentUserData.has("foto_perfil_url") && !currentUserData.get("foto_perfil_url").isJsonNull()
+                                    ? currentUserData.get("foto_perfil_url").getAsString() : "/devt/login/images/profile_images/default_user.png"; // Default si no hay
+            
+            // Cargar la imagen usando el método modificado
+            loadImage(photoUrl, lblProfilePicture, 150, 150);
+        } else {
+            lblUsername.setText("Usuario: N/A");
+            lblEmail.setText("Correo: N/A");
+            lblProfilePicture.setIcon(null); // Limpiar foto si no hay datos de usuario
+        }
+
         if (currentCharacterData != null) {
-            lblCharacterName.setText("Nombre: " + currentCharacterData.get("nombre_personaje").getAsString());
+            lblCharacterName.setText("Nombre: " + (currentCharacterData.get("nombre_personaje").isJsonNull() ? "Sin Nombre" : currentCharacterData.get("nombre_personaje").getAsString()));
             lblLevel.setText("Nivel: " + currentCharacterData.get("nivel").getAsInt());
             lblHealth.setText("Vida: " + currentCharacterData.get("vida_actual").getAsInt());
             lblEnergy.setText("Energía: " + currentCharacterData.get("energia").getAsInt());
-            
-            String photoUrl = currentCharacterData.has("foto_perfil_url") && !currentCharacterData.get("foto_perfil_url").isJsonNull()
-                                     ? currentCharacterData.get("foto_perfil_url").getAsString() : "";
-            loadImage(photoUrl, lblProfilePicture, 150, 150);
+            // La foto de perfil ya no se carga desde currentCharacterData
+        } else {
+            lblCharacterName.setText("Nombre: N/A");
+            lblLevel.setText("Nivel: N/A");
+            lblHealth.setText("Vida: N/A");
+            lblEnergy.setText("Energía: N/A");
         }
     }
     
     // --- Lógica de Interacción con el Usuario ---
     private void selectAndUploadPhoto() {
+        if (userId == null) {
+            JOptionPane.showMessageDialog(this, "No se pudo obtener el ID de usuario para actualizar la foto.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Seleccionar foto de perfil");
         int userSelection = fileChooser.showOpenDialog(this);
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
             try {
-                File destDir = new File("src/main/resources/profile_images/");
-                if (!destDir.exists()) destDir.mkdirs();
+                // Asegúrate de que el directorio de destino exista
+                File destDir = new File(USER_PROFILE_IMAGES_DIR);
+                if (!destDir.exists()) {
+                    destDir.mkdirs(); // Crea el directorio si no existe
+                }
 
-                String fileName = "char_" + characterId + "_" + System.currentTimeMillis() + getFileExtension(selectedFile);
+                // Genera un nombre de archivo único para evitar colisiones
+                // Ahora usa el userId en el nombre del archivo
+                String fileName = "user_" + userId + "_" + System.currentTimeMillis() + getFileExtension(selectedFile);
                 File destFile = new File(destDir, fileName);
+                
+                // Copia el archivo seleccionado al directorio de destino
                 Files.copy(selectedFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-                String photoUrl = "/profile_images/" + fileName; // Ruta relativa para recursos internos
+                // La URL a guardar en la base de datos es la ruta ABSOLUTA del archivo
+                String photoUrlToSave = destFile.getAbsolutePath();
                 
-                updateCharacterPhoto(photoUrl);
-
+                updateUserProfilePhoto(photoUrlToSave); // Actualiza la DB y la UI para el USUARIO
+                
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(this, "Error al copiar la imagen: " + ex.getMessage(), "Error de Archivo", JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace(); // Imprime el stack trace para depuración
             }
         }
     }
@@ -315,32 +377,33 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         return name.substring(lastDotIndex);
     }
 
-    private void updateCharacterPhoto(String newPhotoUrl) {
-        if (characterId == null) {
-            JOptionPane.showMessageDialog(this, "No hay un personaje cargado para actualizar.", "Error", JOptionPane.ERROR_MESSAGE);
+    // Nuevo método para actualizar la foto de perfil del USUARIO
+    private void updateUserProfilePhoto(String newPhotoUrl) {
+        if (userId == null) {
+            JOptionPane.showMessageDialog(this, "No hay un usuario cargado para actualizar la foto.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
         
         // Actualizar el JsonObject localmente y la UI inmediatamente
-        currentCharacterData.addProperty("foto_perfil_url", newPhotoUrl);
-        updateProfileUI(); // Actualiza la imagen en el panel izquierdo
+        // Esto es importante para que la UI se refresque con la nueva URL
+        currentUserData.addProperty("foto_perfil_url", newPhotoUrl);
+        updateProfileUI(); // Vuelve a llamar a updateProfileUI para recargar la imagen desde la nueva URL
 
         new SwingWorker<ApiClient.ApiResponse, Void>() {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
-                JsonObject updateData = new JsonObject();
-                updateData.addProperty("foto_perfil_url", newPhotoUrl);
-                return ApiClient.updateCharacterProfile(characterId, updateData);
+                // Llama al nuevo método del ApiClient para actualizar la foto del usuario
+                return ApiClient.updateUserProfilePicture(userId, newPhotoUrl);
             }
 
             @Override
             protected void done() {
                 try {
                     ApiResponse response = get();
-                    if (response.success) {
+                    if (response.isSuccess()) {
                         JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Foto de perfil actualizada.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
                     } else {
-                        JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al actualizar foto: " + response.message, "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al actualizar foto: " + response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -352,44 +415,61 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
 
     private void editCharacterName() {
         String currentName = currentCharacterData != null && currentCharacterData.has("nombre_personaje") && !currentCharacterData.get("nombre_personaje").isJsonNull()
-                                     ? currentCharacterData.get("nombre_personaje").getAsString() : "";
+                                        ? currentCharacterData.get("nombre_personaje").getAsString() : "";
         
-        String newName = JOptionPane.showInputDialog(this, "Ingresa el nuevo nombre del personaje:", "Editar Nombre", JOptionPane.PLAIN_MESSAGE, null, null, currentName);
+        JTextField nameField = new JTextField(currentName);
+        
+        Object[] message = {
+            "Ingresa el nuevo nombre del personaje:",
+            nameField
+        };
+        
+        int option = JOptionPane.showConfirmDialog(
+            this,
+            message,
+            "Editar Nombre",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.PLAIN_MESSAGE
+        );
 
-        if (newName != null && !newName.trim().isEmpty() && !newName.trim().equals(currentName)) {
-            if (characterId == null) {
-                JOptionPane.showMessageDialog(this, "No hay un personaje cargado para actualizar.", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            
-            currentCharacterData.addProperty("nombre_personaje", newName.trim());
-            updateProfileUI();
+        if (option == JOptionPane.OK_OPTION) {
+            String newName = nameField.getText();
 
-            new SwingWorker<ApiClient.ApiResponse, Void>() {
-                @Override
-                protected ApiClient.ApiResponse doInBackground() throws Exception {
-                    JsonObject updateData = new JsonObject();
-                    updateData.addProperty("nombre_personaje", newName.trim());
-                    return ApiClient.updateCharacterProfile(characterId, updateData);
+            if (newName != null && !newName.trim().isEmpty() && !newName.trim().equals(currentName)) {
+                if (characterId == null) {
+                    JOptionPane.showMessageDialog(this, "No hay un personaje cargado para actualizar.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
+                
+                currentCharacterData.addProperty("nombre_personaje", newName.trim());
+                updateProfileUI();
 
-                @Override
-                protected void done() {
-                    try {
-                        ApiResponse response = get();
-                        if (response.success) {
-                            JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Nombre del personaje actualizado.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                        } else {
-                            JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al actualizar nombre: " + response.message, "Error", JOptionPane.ERROR_MESSAGE);
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error inesperado al actualizar nombre: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                new SwingWorker<ApiClient.ApiResponse, Void>() {
+                    @Override
+                    protected ApiClient.ApiResponse doInBackground() throws Exception {
+                        JsonObject updateData = new JsonObject();
+                        updateData.addProperty("nombre_personaje", newName.trim());
+                        return ApiClient.updateCharacterProfile(characterId, updateData);
                     }
-                }
-            }.execute();
-        } else if (newName != null && newName.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El nombre del personaje no puede estar vacío.", "Error", JOptionPane.ERROR_MESSAGE);
+
+                    @Override
+                    protected void done() {
+                        try {
+                            ApiResponse response = get();
+                            if (response.isSuccess()) {
+                                JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Nombre del personaje actualizado.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                            } else {
+                                JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al actualizar nombre: " + response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error inesperado al actualizar nombre: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                }.execute();
+            } else if (newName != null && newName.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "El nombre del personaje no puede estar vacío.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
@@ -398,11 +478,9 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
             JOptionPane.showMessageDialog(this, "No hay datos de personaje para guardar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
-
         new SwingWorker<ApiClient.ApiResponse, Void>() {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
-                // Envía el JsonObject completo del personaje para actualizar todos los campos
                 return ApiClient.updateCharacterProfile(characterId, currentCharacterData);
             }
 
@@ -410,10 +488,10 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
             protected void done() {
                 try {
                     ApiResponse response = get();
-                    if (response.success) {
+                    if (response.isSuccess()) {
                         JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Progreso del juego guardado.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
                     } else {
-                        JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al guardar progreso: " + response.message, "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al guardar progreso: " + response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -446,12 +524,12 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
                 protected void done() {
                     try {
                         ApiResponse response = get();
-                        if (response.success) {
+                        if (response.isSuccess()) {
                             JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "¡Ítem añadido al inventario!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
                             // Recargar inventario para ver el cambio
-                            reloadInventoryFromApi(); // Llama al método para recargar el inventario
+                            reloadInventoryFromApi();
                         } else {
-                            JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al añadir ítem: " + response.message, "Error", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al añadir ítem: " + response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -476,11 +554,17 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
             protected void done() {
                 try {
                     ApiResponse response = get();
-                    if (response.success && response.inventory != null) {
-                        inventoryDisplayPanel.loadInventoryData(response.inventory);
+                    if (response.isSuccess()) {
+                        JsonArray inventoryArray = response.getDataAsJsonArray(); // Obtener JsonArray directamente
+                        if (inventoryArray != null) {
+                           inventoryDisplayPanel.loadInventoryData(inventoryArray); // Pasa el JsonArray directamente
+                        } else {
+                            System.err.println("Error: La respuesta de inventario fue exitosa pero los datos no son un array JSON o son nulos.");
+                            JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al recargar inventario: Datos inesperados.", "Error", JOptionPane.ERROR_MESSAGE);
+                        }
                     } else {
-                        System.err.println("Error al recargar inventario: " + response.message);
-                        JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al recargar inventario: " + response.message, "Error", JOptionPane.ERROR_MESSAGE);
+                        System.err.println("Error al recargar inventario: " + response.getMessage());
+                        JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al recargar inventario: " + response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -496,18 +580,23 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         new SwingWorker<ApiClient.ApiResponse, Void>() {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
-                // Asegúrate de que ApiClient tenga este método
-                return ApiClient.getEnemiesDefeated(characterId); 
+                return ApiClient.getEnemiesDefeated(characterId);
             }
             @Override
             protected void done() {
                 try {
                     ApiResponse response = get();
-                    if (response.success && response.enemies_defeated != null) { // Asume que la API devuelve 'enemies_defeated'
-                        enemiesDefeatedDisplayPanel.loadEnemiesDefeatedData(response.enemies_defeated);
+                    if (response.isSuccess()) {
+                        JsonArray enemiesArray = response.getDataAsJsonArray(); // Obtener JsonArray directamente
+                        if (enemiesArray != null) {
+                            enemiesDefeatedDisplayPanel.loadEnemiesDefeatedData(enemiesArray);
+                        } else {
+                            System.err.println("Error: La respuesta de enemigos derrotados fue exitosa pero los datos no son un array JSON o son nulos.");
+                            JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al recargar enemigos derrotados: Datos inesperados.", "Error", JOptionPane.ERROR_MESSAGE);
+                        }
                     } else {
-                        System.err.println("Error al recargar enemigos derrotados: " + response.message);
-                        JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al recargar enemigos derrotados: " + response.message, "Error", JOptionPane.ERROR_MESSAGE);
+                        System.err.println("Error al recargar enemigos derrotados: " + response.getMessage());
+                        JOptionPane.showMessageDialog(PanelProfileAndInventory.this, "Error al recargar enemigos derrotados: " + response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -524,28 +613,36 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
             return;
         }
         try {
-            URL url;
-            // Si la URL es una ruta de recurso interno (ej. /profile_images/imagen.png)
+            Image img = null;
+            // Intenta cargar como recurso interno del JAR (si empieza con '/')
             if (imageUrl.startsWith("/")) {
-                url = getClass().getResource(imageUrl);
-            } else { // Si es una URL externa (http/https) o ruta de archivo absoluta
-                url = new URL(imageUrl);
-            }
-
-            if (url != null) {
-                BufferedImage img = ImageIO.read(url);
-                if (img != null) {
-                    Image scaledImg = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
-                    targetLabel.setIcon(new ImageIcon(scaledImg));
-                } else {
-                    targetLabel.setIcon(null); // No se pudo leer la imagen
+                URL resourceUrl = getClass().getResource(imageUrl);
+                if (resourceUrl != null) {
+                    img = ImageIO.read(resourceUrl);
                 }
             } else {
-                targetLabel.setIcon(null); // URL nula
+                // Si no es un recurso interno, intenta cargar como archivo del sistema de archivos (ruta absoluta)
+                File imageFile = new File(imageUrl);
+                if (imageFile.exists() && imageFile.isFile()) {
+                    img = ImageIO.read(imageFile);
+                }
+            }
+
+            if (img != null) {
+                Image scaledImg = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                targetLabel.setIcon(new ImageIcon(scaledImg));
+            } else {
+                targetLabel.setIcon(null); // No se pudo leer la imagen
+                System.err.println("No se pudo cargar la imagen desde: " + imageUrl);
             }
         } catch (IOException e) {
-            System.err.println("Error al cargar imagen " + imageUrl + ": " + e.getMessage());
+            System.err.println("Error de E/S al cargar imagen " + imageUrl + ": " + e.getMessage());
             targetLabel.setIcon(null); // En caso de error, no mostrar icono
+            e.printStackTrace(); // Imprime el stack trace para depuración
+        } catch (Exception e) {
+            System.err.println("Error inesperado al cargar imagen " + imageUrl + ": " + e.getMessage());
+            targetLabel.setIcon(null);
+            e.printStackTrace();
         }
     }
 
@@ -553,8 +650,14 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
     public void addLogoutActionListener(ActionListener listener) {
         btnLogout.addActionListener(listener);
     }
-}
 
-    
-    
+    // Método para añadir un listener al botón "Volver al Menú Principal"
+    public void addBackToMainMenuListener(ActionListener listener) {
+        if (btnBackToMainMenu != null) {
+            btnBackToMainMenu.addActionListener(listener);
+        } else {
+            System.err.println("Advertencia: btnBackToMainMenu no está inicializado en PanelProfileAndInventory.");
+        }
+    }
+}
 

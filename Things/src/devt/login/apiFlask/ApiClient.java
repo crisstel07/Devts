@@ -1,37 +1,43 @@
 package devt.login.apiFlask;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser; // Necesario para parsear la respuesta
+import com.google.gson.JsonElement;
+import com.google.gson.JsonArray;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonElement; // Importar JsonElement para mayor flexibilidad
-import com.google.gson.JsonParser; // Importar JsonParser para parsear la respuesta
-import com.google.gson.JsonSyntaxException;
+import java.nio.charset.StandardCharsets; // Importar StandardCharsets
+import java.util.Map;
 
 public class ApiClient {
 
     private static final String API_BASE_URL = "http://localhost:5000/api/";
     private static final Gson gson = new Gson();
 
-    // Clase ApiResponse interna actualizada para ser más flexible
+    /**
+     * Clase interna para representar la respuesta genérica de la API.
+     * Ahora incluye el código de error HTTP.
+     */
     public static class ApiResponse {
         private boolean success;
         private String message;
-        private JsonElement data; // Ahora es JsonElement para manejar objetos, arrays, etc.
+        private JsonElement data; // Un solo campo para todos los datos variables (user, character, inventory, etc.)
+        private int errorCode; // Nuevo: Para almacenar el código de respuesta HTTP
 
-        // Constructor vacío para Gson
-        public ApiResponse() {}
-
-        // Constructor completo (útil para crear respuestas de error manualmente)
-        public ApiResponse(boolean success, String message, JsonElement data) {
+        // Constructor para uso manual (ej. para errores de conexión)
+        public ApiResponse(boolean success, String message, JsonElement data, int errorCode) {
             this.success = success;
             this.message = message;
             this.data = data;
+            this.errorCode = errorCode;
         }
 
+        // Getters para acceder a los campos
         public boolean isSuccess() {
             return success;
         }
@@ -40,11 +46,14 @@ public class ApiClient {
             return message;
         }
 
-        public JsonElement getData() { // Retorna JsonElement
+        public JsonElement getData() {
             return data;
         }
 
-        // Métodos de ayuda para acceder a los datos si sabes su tipo
+        /**
+         * Intenta obtener los datos como un JsonObject.
+         * @return JsonObject si 'data' es un objeto JSON, de lo contrario null.
+         */
         public JsonObject getDataAsJsonObject() {
             if (data != null && data.isJsonObject()) {
                 return data.getAsJsonObject();
@@ -52,32 +61,50 @@ public class ApiClient {
             return null;
         }
 
-        public com.google.gson.JsonArray getDataAsJsonArray() {
+        /**
+         * Intenta obtener los datos como un JsonArray.
+         * @return JsonArray si 'data' es un array JSON, de lo contrario null.
+         */
+        public JsonArray getDataAsJsonArray() {
             if (data != null && data.isJsonArray()) {
                 return data.getAsJsonArray();
             }
             return null;
         }
+
+        public int getErrorCode() {
+            return errorCode;
+        }
     }
 
-    // --- Métodos de ayuda para realizar peticiones HTTP ---
-    // (Refactorizados para ser reutilizables y devolver ApiResponse)
-
-    private static ApiResponse executeRequest(String urlString, String method, JsonObject jsonInput) {
+    /**
+     * Método auxiliar para realizar solicitudes HTTP genéricas (POST, GET, PUT).
+     * Centraliza la lógica de conexión y manejo de respuesta.
+     * @param endpoint El endpoint de la API (ej. "register", "profile/123").
+     * @param method El método HTTP (ej. "POST", "GET", "PUT").
+     * @param jsonInput El JsonObject a enviar en el cuerpo de la solicitud (puede ser null para GET).
+     * @return ApiResponse con el resultado de la operación.
+     */
+    private static ApiResponse sendRequest(String endpoint, String method, JsonObject jsonInput) {
         HttpURLConnection conn = null;
         try {
-            URL url = new URL(urlString);
+            URL url = new URL(API_BASE_URL + endpoint);
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod(method);
             conn.setRequestProperty("Content-Type", "application/json; utf-8");
             conn.setRequestProperty("Accept", "application/json");
-            conn.setConnectTimeout(5000); // 5 segundos de timeout para conexión
-            conn.setReadTimeout(5000); // 5 segundos de timeout para lectura
-
-            if (jsonInput != null) {
+            conn.setDoOutput(true); // Permitir salida para POST/PUT
+            
+            // Deshabilitar doOutput para GET requests
+            if (method.equals("GET")) {
+                conn.setDoOutput(false);
+            } else {
                 conn.setDoOutput(true);
+            }
+
+            if (jsonInput != null && conn.getDoOutput()) {
                 try (OutputStream os = conn.getOutputStream()) {
-                    byte[] input = jsonInput.toString().getBytes("utf-8");
+                    byte[] input = jsonInput.toString().getBytes(StandardCharsets.UTF_8);
                     os.write(input, 0, input.length);
                 }
             }
@@ -86,10 +113,11 @@ public class ApiClient {
             StringBuilder responseBuilder = new StringBuilder();
             
             InputStreamReader isr;
+            // Leer del InputStream para respuestas exitosas (2xx) y ErrorStream para errores (4xx, 5xx)
             if (responseCode >= 200 && responseCode < 300) {
-                isr = new InputStreamReader(conn.getInputStream(), "utf-8");
+                isr = new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8);
             } else {
-                isr = new InputStreamReader(conn.getErrorStream(), "utf-8");
+                isr = new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8);
             }
 
             try (BufferedReader br = new BufferedReader(isr)) {
@@ -100,22 +128,34 @@ public class ApiClient {
             }
 
             String rawResponse = responseBuilder.toString();
-            System.out.println("Respuesta del servidor (" + method + " " + urlString + ") [" + responseCode + "]: " + rawResponse);
+            System.out.println("Respuesta del servidor /" + endpoint + " (" + responseCode + "): " + rawResponse);
             
-            // Parsear la respuesta en el nuevo formato ApiResponse
+            // Parsear la respuesta JSON
+            JsonObject jsonResponse;
             try {
-                JsonObject jsonResponse = JsonParser.parseString(rawResponse).getAsJsonObject();
-                boolean success = jsonResponse.has("success") && jsonResponse.get("success").getAsBoolean();
-                String message = jsonResponse.has("message") && !jsonResponse.get("message").isJsonNull() ? jsonResponse.get("message").getAsString() : null;
-                JsonElement data = jsonResponse.has("data") && !jsonResponse.get("data").isJsonNull() ? jsonResponse.get("data") : null;
-                return new ApiResponse(success, message, data);
-            } catch (JsonSyntaxException e) {
-                return new ApiResponse(false, "Error de sintaxis JSON en la respuesta del servidor: " + e.getMessage() + ". Raw: " + rawResponse, null);
+                jsonResponse = JsonParser.parseString(rawResponse).getAsJsonObject();
+            } catch (Exception e) {
+                // Si la respuesta no es un JSON válido, o está vacía
+                return new ApiResponse(false, "Respuesta inválida del servidor: " + rawResponse, null, responseCode);
             }
 
+            boolean success = jsonResponse.has("success") ? jsonResponse.get("success").getAsBoolean() : false;
+            String message = jsonResponse.has("message") ? jsonResponse.get("message").getAsString() : "No message";
+            JsonElement dataElement = jsonResponse.has("data") ? jsonResponse.get("data") : null;
+
+            // Devolver la ApiResponse con todos los datos
+            return new ApiResponse(success, message, dataElement, responseCode);
+
+        } catch (java.net.ConnectException e) {
+            System.err.println("Error de conexión: " + e.getMessage());
+            return new ApiResponse(false, "No se pudo conectar al servidor Flask. Asegúrate de que esté corriendo.", null, 0);
+        } catch (java.net.SocketTimeoutException e) {
+            System.err.println("Tiempo de espera agotado: " + e.getMessage());
+            return new ApiResponse(false, "Tiempo de espera agotado al conectar o leer del servidor.", null, 0);
         } catch (Exception e) {
-            System.err.println("Error en la petición HTTP a " + urlString + ": " + e.getMessage());
-            return new ApiResponse(false, "Error de conexión o de red: " + e.getMessage(), null);
+            System.err.println("Error inesperado en sendRequest para /" + endpoint + ": " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse(false, "Error inesperado: " + e.getMessage(), null, 0);
         } finally {
             if (conn != null) {
                 conn.disconnect();
@@ -123,68 +163,80 @@ public class ApiClient {
         }
     }
 
-    // --- Métodos específicos de la API (usando el nuevo executeRequest) ---
+    // --- Métodos específicos de la API ---
 
     public static ApiResponse registerUser(String nombreUsuario, String correo, String password) {
         JsonObject jsonInput = new JsonObject();
         jsonInput.addProperty("nombre_usuario", nombreUsuario);
         jsonInput.addProperty("correo", correo);
-        jsonInput.addProperty("password", password);
-        return executeRequest(API_BASE_URL + "register", "POST", jsonInput);
+        jsonInput.addProperty("password", password); // Asegúrate que tu Flask espera 'password'
+        return sendRequest("register", "POST", jsonInput);
     }
 
-    public static ApiResponse verifyUser(int userId, String code) {
+    public static ApiResponse verifyUser(String email, String code) {
         JsonObject jsonInput = new JsonObject();
-        jsonInput.addProperty("user_id", userId);
+        jsonInput.addProperty("correo", email); // Tu Flask espera 'correo'
         jsonInput.addProperty("code", code);
-        return executeRequest(API_BASE_URL + "verify", "POST", jsonInput);
+        return sendRequest("verify", "POST", jsonInput);
     }
 
     public static ApiResponse loginUser(String correo, String password) {
         JsonObject jsonInput = new JsonObject();
-        jsonInput.addProperty("correo", correo);
+        jsonInput.addProperty("correo", correo); // Tu Flask espera 'correo' para login
         jsonInput.addProperty("password", password);
-        return executeRequest(API_BASE_URL + "login", "POST", jsonInput);
+        return sendRequest("login", "POST", jsonInput);
     }
 
-    public static ApiResponse getOrCreateCharacterProfile(int userId) {
-        // Asegúrate de que tu API Flask tenga un endpoint GET /api/profile/<user_id>
-        return executeRequest(API_BASE_URL + "profile/" + userId, "GET", null);
+    public static ApiResponse resendVerificationCode(String email) {
+        JsonObject jsonInput = new JsonObject();
+        jsonInput.addProperty("correo", email);
+        return sendRequest("resend_code", "POST", jsonInput);
     }
 
-    // Método para obtener un personaje por su ID (nuevo, usado por PanelProfileAndInventory)
-    public static ApiResponse getCharacterById(int characterId) {
-        // Asegúrate de que tu API Flask tenga un endpoint GET /api/characters/<character_id>
-        return executeRequest(API_BASE_URL + "characters/" + characterId, "GET", null);
+    public static ApiResponse getOrCreateCharacterProfile(int userId) { // <-- CAMBIO A int userId
+        // Tu Flask API tiene un endpoint como /api/profile/<int:user_id> (GET)
+        return sendRequest("profile/" + userId, "GET", null);
     }
 
-    // Método para actualizar el perfil de un personaje (existente, adaptado)
-    // Ahora acepta un JsonObject completo para la actualización
     public static ApiResponse updateCharacterProfile(int characterId, JsonObject updateData) {
-        // Asegúrate de que tu API Flask tenga un endpoint PUT /api/profile/<character_id>
-        // o /api/characters/<character_id> si usas el que te di antes.
-        // Usaré /profile/ por consistencia con tu código original.
-        return executeRequest(API_BASE_URL + "profile/" + characterId, "PUT", updateData);
-    }
-    
-    // Método para obtener el inventario de un personaje (existente, adaptado)
-    public static ApiResponse getCharacterInventory(int characterId) {
-        // Asegúrate de que tu API Flask tenga un endpoint GET /api/inventory/<character_id>
-        return executeRequest(API_BASE_URL + "inventory/" + characterId, "GET", null);
+        // Tu Flask API tiene un endpoint como /api/profile/<int:character_id> con método PUT
+        return sendRequest("profile/" + characterId, "PUT", updateData);
     }
 
-    // Método para añadir un ítem al inventario (existente, adaptado)
+    // Nuevo método para actualizar la foto de perfil del usuario
+    public static ApiResponse updateUserProfilePicture(int userId, String photoUrl) {
+        JsonObject payload = new JsonObject();
+        payload.addProperty("foto_perfil_url", photoUrl);
+        return sendRequest("users/" + userId + "/profile_picture", "PUT", payload);
+    }
+
+    public static ApiResponse getCharacterInventory(int characterId) {
+        // Tu Flask API tiene un endpoint como /api/inventory/<int:character_id>
+        return sendRequest("inventory/" + characterId, "GET", null);
+    }
+
     public static ApiResponse addItemToInventory(int characterId, int itemId, int quantity) {
         JsonObject jsonInput = new JsonObject();
         jsonInput.addProperty("item_id", itemId);
-        jsonInput.addProperty("cantidad", quantity);
-        // Asegúrate de que tu API Flask tenga un endpoint POST /api/inventory/<character_id>/add
-        return executeRequest(API_BASE_URL + "inventory/" + characterId + "/add", "POST", jsonInput);
+        jsonInput.addProperty("cantidad", quantity); // Tu Flask espera 'cantidad'
+        return sendRequest("inventory/" + characterId + "/add", "POST", jsonInput);
+    }
+    
+    public static ApiResponse getEnemiesDefeated(int characterId) {
+        return sendRequest("enemies_defeated/" + characterId, "GET", null);
     }
 
-    // Nuevo método para obtener enemigos derrotados (usado por PanelProfileAndInventory)
-    public static ApiResponse getEnemiesDefeated(int characterId) {
-        // Asegúrate de que tu API Flask tenga un endpoint GET /api/enemies_defeated/<character_id>
-        return executeRequest(API_BASE_URL + "enemies_defeated/" + characterId, "GET", null);
+    // Método para crear un personaje (separado de getOrCreateCharacterProfile)
+    public static ApiResponse createCharacter(int userId, String characterName) {
+        JsonObject jsonInput = new JsonObject();
+        jsonInput.addProperty("usuario_id", userId);
+        jsonInput.addProperty("nombre_personaje", characterName);
+        // Asume que tu Flask tiene un endpoint POST /api/characters o similar
+        // Si tu API no tiene un endpoint específico para crear personaje,
+        // este método necesitaría ser ajustado para usar getOrCreateCharacterProfile si es el que crea.
+        // Basado en tu app.py, el endpoint es /api/profile/<user_id> que crea si no existe.
+        // Por ahora, lo dejaré como un POST a "characters" si tienes uno.
+        // Si no, deberías usar getOrCreateCharacterProfile y manejar la respuesta de creación.
+        return sendRequest("characters", "POST", jsonInput); // Asumiendo que tienes un /api/characters POST
     }
 }

@@ -1,15 +1,12 @@
-
 package devt.login.components;
-//Dibuja elementos graficos como lineas, rectangulos, imagenes, etc.
-import devt.login.model.ModelLogin;
-import devt.login.model.ModelUser;
+
 import devt.login.swing.Button;
 import devt.login.swing.MyPasswordField;
 import devt.login.swing.MyTextField;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Font;
-import java.awt.GradientPaint; // Pinta el fondo
+import java.awt.GradientPaint; 
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
@@ -19,159 +16,177 @@ import net.miginfocom.swing.MigLayout;
 
 public class PanelLoginAndRegister extends javax.swing.JLayeredPane {
 
-    
-    private ModelUser user;
-    private ModelLogin DataLogin;
-    
-    private MyTextField txtUser;
-    private MyTextField txtEmail;
-    private MyPasswordField txtPass;
+    // Campos para el panel de Registro
+    private MyTextField txtRegisterUsername; 
+    private MyTextField txtRegisterEmail; 
+    private MyPasswordField txtRegisterPassword; 
+    // private MyPasswordField txtRegisterConfirmPassword; // Si se necesita
 
-    private MyTextField txtLoginEmail;
-    private MyPasswordField txtLoginPass;
+    // Campos para el panel de Login
+    private MyTextField txtLoginEmail; 
+    private MyPasswordField txtLoginPassword; 
     
-    public ModelUser getUser() {
-        String userName = txtUser.getText().trim();
-        String email = txtEmail.getText().trim(); // Accede a la variable de instancia
-        String password = String.valueOf(txtPass.getPassword()); // Accede a la variable de instancia
-        return new ModelUser(0, userName, email, password);
-    }
-
-     public ModelLogin getDataLogin() {
-        // Asegúrate de que estas variables de instancia se asignen en initLogin
-        String email = txtLoginEmail.getText().trim();
-        String password = String.valueOf(txtLoginPass.getPassword());
-        return new ModelLogin(email, password);
-    }
-     
-     public void setDataLogin(ModelLogin data) {
-    if (txtLoginEmail != null) {
-        txtLoginEmail.setText(data.getEmail());
-    }
-    if (txtLoginPass != null) {
-        txtLoginPass.setText(data.getPassword());
-    }
-}
-     
-    public PanelLoginAndRegister(ActionListener eventRegister,ActionListener eventLogin) {
-        initComponents();
-        setOpaque(false); // indica cuando un componet es trasnparente o no opaco.
-         
+    public PanelLoginAndRegister(ActionListener eventRegister, ActionListener eventLogin) {
+        initComponents(); // Inicializa los JPanels internos (login, register)
+        setOpaque(false); // Asegura que este JLayeredPane sea transparente para ver el fondo
+        
+        // Configura los paneles de login y registro
+        // CORRECCIÓN: Usar las variables renombradas
         initRegister(eventRegister);
         initLogin(eventLogin);
-        login.setVisible(false);
-        register.setVisible(true);
         
-        // Paneles trasnparentes (login and register)
+        // Establece el panel visible inicialmente (Login o Register)
+        // Para que coincida con LoginBase, que arranca en Register y anima a Login
+        // CORRECCIÓN: Usar las variables renombradas
+        login.setVisible(false); // Empieza oculto para que la animación lo revele
+        register.setVisible(true); // Empieza visible
+
+        // CORRECCIÓN: Usar las variables renombradas
         login.setOpaque(false);
         register.setOpaque(false);
-        
+    }
+    
+    // --- Getters para los campos de registro (usados por LoginBase) ---
+    public String getRegisterUsername() {
+        return txtRegisterUsername.getText().trim();
     }
 
-    private void initRegister(ActionListener eventRegister){
-        // Titutlo
-        register.setLayout(new  MigLayout("wrap", "push[center]push", "push[]25[]10[]10[]25[]push"));
+    public String getRegisterEmail() {
+        return txtRegisterEmail.getText().trim();
+    }
+
+    public String getRegisterPassword() {
+        return String.valueOf(txtRegisterPassword.getPassword());
+    }
+    // Si tienes un campo de confirmación:
+    // public String getRegisterConfirmPassword() {
+    //     return String.valueOf(txtRegisterConfirmPassword.getPassword());
+    // }
+
+    // --- Getters para los campos de login (usados por LoginBase) ---
+    public String getLoginEmail() {
+        return txtLoginEmail.getText().trim();
+    }
+
+    public String getLoginPassword() {
+        return String.valueOf(txtLoginPassword.getPassword());
+    }
+
+    private void initRegister(ActionListener eventRegister) {
+        // CORRECCIÓN: Usar la variable renombrada
+        register.setLayout(new MigLayout("wrap", "push[center]push", "push[]25[]10[]10[]25[]push"));
         
-        //Registro
         JLabel label = new JLabel("Crea una Cuenta");
         label.setFont(new Font("sansserif", 1, 30));
-        label.setForeground(new Color(68,148,125));
+        label.setForeground(new Color(68, 148, 125));
+        // CORRECCIÓN: Usar la variable renombrada
         register.add(label);
         
-        txtUser = new MyTextField();
-        txtUser.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/user.png")));
-        txtUser.setHint("Nombre");
-        register.add(txtUser, "w 60%");
+        txtRegisterUsername = new MyTextField();
+        txtRegisterUsername.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/user.png")));
+        txtRegisterUsername.setHint("Nombre de Usuario");
+        // CORRECCIÓN: Usar la variable renombrada
+        register.add(txtRegisterUsername, "w 60%");
         
-        //Email
-        txtEmail = new MyTextField();
-        txtEmail.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/mail.png")));
-        txtEmail.setHint("Email");
-        register.add(txtEmail, "w 60%");
+        txtRegisterEmail = new MyTextField();
+        txtRegisterEmail.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/mail.png")));
+        txtRegisterEmail.setHint("Email");
+        // CORRECCIÓN: Usar la variable renombrada
+        register.add(txtRegisterEmail, "w 60%");
         
-        //Password
-        txtPass = new MyPasswordField();
-        txtPass.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/pass.png")));
-        txtPass.setHint("Contraseña");
-        register.add(txtPass, "w 60%");
+        txtRegisterPassword = new MyPasswordField();
+        txtRegisterPassword.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/pass.png")));
+        txtRegisterPassword.setHint("Contraseña");
+        // CORRECCIÓN: Usar la variable renombrada
+        register.add(txtRegisterPassword, "w 60%");
+        
+        // Si necesitas un campo de confirmar contraseña, añádelo aquí:
+        // txtRegisterConfirmPassword = new MyPasswordField();
+        // txtRegisterConfirmPassword.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/pass.png")));
+        // txtRegisterConfirmPassword.setHint("Confirmar Contraseña");
+        // register.add(txtRegisterConfirmPassword, "w 60%");
         
         Button cmd = new Button();
-        cmd.setBackground(new Color(68,148,125));
+        cmd.setBackground(new Color(68, 148, 125));
         cmd.setForeground(new Color(250, 250, 250));
-        cmd.addActionListener(eventRegister);
+        cmd.addActionListener(eventRegister); 
         cmd.setText("REGISTRARSE");
+        // CORRECCIÓN: Usar la variable renombrada
         register.add(cmd, "w 40%, h 40");
-         cmd.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent ae) {
-                String userName = txtUser.getText().trim();
-                String email = txtEmail.getText().trim();
-                String password = String.valueOf(txtPass.getPassword());
-                user = new ModelUser(0, userName, email, password);
-            }
-        });
     }
     
-    
-    private void initLogin (ActionListener eventLogin){
-     // Tutulo
-     login.setLayout(new MigLayout("wrap", "push[center]push", "push[]25[]10[]10[]25[]push"));
-     
-     // Elementos de inicio de sesión
+    private void initLogin(ActionListener eventLogin) {
+        // CORRECCIÓN: Usar la variable renombrada
+        login.setLayout(new MigLayout("wrap", "push[center]push", "push[]25[]10[]10[]25[]push"));
+        
         JLabel label = new JLabel("Iniciar Sesión");
         label.setFont(new Font("sansserif", 1, 30));
-        label.setForeground(new Color(68,148,125));
+        label.setForeground(new Color(68, 148, 125));
+        // CORRECCIÓN: Usar la variable renombrada
         login.add(label);
         
-     //Ingreso  
-        // Asignar a las variables de INSTANCIA, no a las locales        
-        txtLoginEmail = new MyTextField(); // Corregido: Asignar a la variable de instancia
+        txtLoginEmail = new MyTextField();
         txtLoginEmail.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/mail.png")));
         txtLoginEmail.setHint("Email");
+        // CORRECCIÓN: Usar la variable renombrada
         login.add(txtLoginEmail, "w 60%");
         
-        //Password
-       txtLoginPass = new MyPasswordField(); // Corregido: Asignar a la variable de instancia
-        txtLoginPass.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/pass.png")));
-        txtLoginPass.setHint("Contraseña");
-        login.add(txtLoginPass, "w 60%");
+        txtLoginPassword = new MyPasswordField();
+        txtLoginPassword.setPrefixIcon(new ImageIcon(getClass().getResource("/devt/login/images/pass.png")));
+        txtLoginPassword.setHint("Contraseña");
+        // CORRECCIÓN: Usar la variable renombrada
+        login.add(txtLoginPassword, "w 60%");
         
         JButton cmdForget = new JButton("¿ Olvidaste tu contraseña ?");
         cmdForget.setForeground(new Color(100, 100, 100));
         cmdForget.setFont(new Font("sansserif", 1, 12));
-        cmdForget.setContentAreaFilled(false); // No pinta el fondo
-        cmdForget.setBorderPainted(false); // No dibuja el borde
-        cmdForget.setFocusPainted(false); // Quita el efecto de focus (clic)
-        cmdForget.setOpaque(false);  //Se asegura de opacar el button.
+        cmdForget.setContentAreaFilled(false);
+        cmdForget.setBorderPainted(false);
+        cmdForget.setFocusPainted(false);
+        cmdForget.setOpaque(false);
         cmdForget.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // CORRECCIÓN: Usar la variable renombrada
         login.add(cmdForget);
-        Button cmd = new Button();
-        cmd.setBackground(new Color(68,148,125));
-        cmd.setForeground(new Color(250, 250, 250));
-        cmd.addActionListener(eventLogin);
-        cmd.setText("INICIAR SESIÓN");
-        login.add(cmd, "w 40%, h 40");
-        /* cmd.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent ae) {
-                // Ya no necesitas crear ModelLogin aquí, getDataLogin() lo hará.
-                // Pero si el ActionListener de cmd lo estaba haciendo, está bien,
-                // solo asegúrate de que txtLoginEmail y txtLoginPass sean de instancia.
-            }
-        });*/
         
+        Button cmd = new Button();
+        cmd.setBackground(new Color(68, 148, 125));
+        cmd.setForeground(new Color(250, 250, 250));
+        cmd.addActionListener(eventLogin); 
+        cmd.setText("INICIAR SESIÓN");
+        // CORRECCIÓN: Usar la variable renombrada
+        login.add(cmd, "w 40%, h 40");
     }
     
-    public void showRegister(boolean show){
-         if (show) {
-            register.setVisible(true);
-            login.setVisible(false);
-        } else {
-            register.setVisible(false);
+    /**
+     * Muestra el panel de registro u oculta el de login, o viceversa.
+     * Esto se usa para las transiciones animadas desde LoginBase.
+     * @param showLogin Si es true, muestra el panel de login; si es false, muestra el de registro.
+     */
+    public void showLogin(boolean showLogin){
+        if (showLogin) {
+            // CORRECCIÓN: Usar las variables renombradas
             login.setVisible(true);
-        }  
+            register.setVisible(false);
+        } else {
+            // CORRECCIÓN: Usar las variables renombradas
+            login.setVisible(false);
+            register.setVisible(true);
+        }
+        clearFields(); // Limpia los campos al cambiar de vista
     }
     
+    /**
+     * Limpia todos los campos de texto en los paneles de login y registro.
+     */
+    public void clearFields() {
+        if (txtRegisterUsername != null) txtRegisterUsername.setText("");
+        if (txtRegisterEmail != null) txtRegisterEmail.setText("");
+        if (txtRegisterPassword != null) txtRegisterPassword.setText("");
+        // if (txtRegisterConfirmPassword != null) txtRegisterConfirmPassword.setText("");
+        if (txtLoginEmail != null) txtLoginEmail.setText("");
+        if (txtLoginPassword != null) txtLoginPassword.setText("");
+    }
+
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -207,11 +222,7 @@ public class PanelLoginAndRegister extends javax.swing.JLayeredPane {
 
         add(register, "card2");
     }// </editor-fold>//GEN-END:initComponents
-
-  
-     
    
-    
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel login;
     private javax.swing.JPanel register;
