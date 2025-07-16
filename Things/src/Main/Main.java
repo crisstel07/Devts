@@ -15,7 +15,11 @@ public class Main {
      */
     public static void main(String[] args) {
         System.out.println("Esto es una prueba");
+<<<<<<< HEAD
         System.out.println("Jala?");
+=======
+        System.out.println("Prueba2");
+>>>>>>> Criss
         // TODO code application logic here
     }
     
