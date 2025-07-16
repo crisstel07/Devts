@@ -1,3 +1,4 @@
+
 package devt.login.components;
 //Dibuja elementos graficos como lineas, rectangulos, imagenes, etc.
 import devt.login.swing.ButtonOutLine;
@@ -23,7 +24,7 @@ public class PanelCover extends javax.swing.JPanel {
     private JLabel description;
     private JLabel description1;
     private ButtonOutLine button;
-    private boolean isLogin; // Esta variable controla el contenido del PanelCover
+    private boolean isLogin;
     
     public PanelCover() {
         initComponents();
@@ -31,29 +32,28 @@ public class PanelCover extends javax.swing.JPanel {
         layout = new MigLayout("wrap, fill", "[center]", "push[]25[]10[]25[]push");
         setLayout(layout);
         init(); 
-        // Establece el contenido inicial del PanelCover para que coincida con el estado inicial de LoginBase (Login)
-        login(true); // Esto mostrará "¡Oye, crack!" en el PanelCover al inicio
     }
 
     private void init(){
-        title = new JLabel("¡Bienvenido a tu aventura!"); // El texto inicial se sobrescribirá por login(true)
+    
+        title = new JLabel("¡Bienvenido a tu aventura!");
         title.setFont(new Font("sansserif", 1, 30));
         title.setForeground(new Color(245, 245, 245));
         add(title);
-        description = new JLabel("<html><div style='text-align: center;'>¿Listo para la acción?<br>Tu próxima aventura te espera</div></html>"); // El texto inicial se sobrescribirá
+        description = new JLabel("<html><div style='text-align: center;'>¿Listo para la acción?<br>Tu próxima aventura te espera</div></html>");
         description.setForeground(new Color(245, 245, 245));
         add(description);
-        description1 = new JLabel("inicia sesión con tu información personal"); // El texto inicial se sobrescribirá
+        description1 = new JLabel("inicia sesión con tu información personal");
         description1.setForeground(new Color(245, 245, 245));
         add(description1);
         button = new ButtonOutLine();
-        button.setBorderPainted(false); 
-        button.setContentAreaFilled(false); 
-        button.setFocusPainted(false);  
-        button.setOpaque(false);
+        button.setBorderPainted(false); // Quita el borde blanco
+        button.setContentAreaFilled(false); // No pinta el fondo
+        button.setFocusPainted(false);  // Quita el recuadro al hacer clic
+        button.setOpaque(false);// Se asegura de el button se transparente.
         button.setBackground(new Color(255, 255, 255));
         button.setForeground(new Color(255, 255, 255));
-        button.setText("INICIAR SESIÓN"); // Este texto se mantendrá constante según tus indicaciones
+        button.setText("INICIAR SESIÓN");
         button.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent ae) {
@@ -84,80 +84,63 @@ public class PanelCover extends javax.swing.JPanel {
         GradientPaint gra = new GradientPaint(0,0, new Color(68,148,125), 0, getHeight(), new Color(70,153,131));
         g2.setPaint(gra);
         g2.fillRect(0, 0,getWidth(),getHeight());
-        super.paintComponent(grphcs); 
+        super.paintComponent(grphcs); //Para cambiar el cuerpo de los métodos generados, seleccione Herramientas/Plantillas
         
     }
-      
-    public void addEvent(ActionListener event) {
+     
+     public void addEvent(ActionListener event) {
         this.event = event;
     }
     
-    public void registerLeft(double v) {
-        v = Double.valueOf(df.format(v));
-        login(false); // <--- Esta llamada es la que tu código original tiene
+     public void registerLeft(double v) {
+         
+      v = Double.valueOf(df.format(v));
+        login(false);
         layout.setComponentConstraints(title, "pad 0 -" + v + "% 0 0");
         layout.setComponentConstraints(description, "pad 0 -" + v + "% 0 0");
         layout.setComponentConstraints(description1, "pad 0 -" + v + "% 0 0");
-        layout.setComponentConstraints(button, "pad 0 -" + v + "% 0 0"); // Añadido para animar el botón también
-        revalidate();
-        repaint();
-    }
-      
-    public void registerRight(double v) {
+     }
+     
+     public void registerRight(double v) {
         v = Double.valueOf(df.format(v));
-        login(false); // <--- Esta llamada es la que tu código original tiene
+        login(false);
         layout.setComponentConstraints(title, "pad 0 -" + v + "% 0 0");
         layout.setComponentConstraints(description, "pad 0 -" + v + "% 0 0");
         layout.setComponentConstraints(description1, "pad 0 -" + v + "% 0 0");
-        layout.setComponentConstraints(button, "pad 0 -" + v + "% 0 0"); // Añadido
-        revalidate();
-        repaint();
     }
 
     public void loginLeft(double v) {
         v = Double.valueOf(df.format(v));
-        login(true); // <--- Esta llamada es la que tu código original tiene
+        login(true);
         layout.setComponentConstraints(title, "pad 0 " + v + "% 0 " + v + "%");
         layout.setComponentConstraints(description, "pad 0 " + v + "% 0 " + v + "%");
         layout.setComponentConstraints(description1, "pad 0 " + v + "% 0 " + v + "%");
-        layout.setComponentConstraints(button, "pad 0 " + v + "% 0 " + v + "%"); // Añadido
-        revalidate();
-        repaint();
     }
 
     public void loginRight(double v) {
         v = Double.valueOf(df.format(v));
-        login(true); // <--- Esta llamada es la que tu código original tiene
+        login(true);
         layout.setComponentConstraints(title, "pad 0 " + v + "% 0 " + v + "%");
         layout.setComponentConstraints(description, "pad 0 " + v + "% 0 " + v + "%");
         layout.setComponentConstraints(description1, "pad 0 " + v + "% 0 " + v + "%");
-        layout.setComponentConstraints(button, "pad 0 " + v + "% 0 " + v + "%"); // Añadido
-        revalidate();
-        repaint();
     }
     
-    // Este método cambia el contenido de texto del PanelCover
-    // 'login': true para el contenido de "¡Oye, crack!" (cuando el panel derecho es Login)
-    //          false para el contenido de "¡Bienvenido a tu aventura!" (cuando el panel derecho es Registro)
-    public void login(boolean login){ 
+     public void login(boolean login){
         if (this.isLogin != login) {
-            if (login) { // Si 'login' es true, significa que el panel DERECHO es LOGIN.
-                         // Por lo tanto, el PanelCover (izquierda) debe mostrar el contenido para el estado LOGIN.
+            if (login) {
                 title.setText("¡Oye, crack!");
                 description.setText("<html><div style='text-align: center;'>Es momento de insertar tus datos y comenzar la misión<br>¡Prepárate para la locura!</div></html>");
                 description1.setText("No olvides tener tu contraseña a la mano"); 
-                button.setText("INICIAR SESIÓN"); // Siempre "INICIAR SESIÓN" según tus imágenes
-            } else { // Si 'login' es false, significa que el panel DERECHO es REGISTRO.
-                      // Por lo tanto, el PanelCover (izquierda) debe mostrar el contenido para el estado REGISTRO.
+                button.setText("REGISTRARSE");
+            } else {
                 title.setText("¡Bienvenido a tu aventura!");
                 description.setText("<html><div style='text-align: center;'>¿Listo para la acción?<br>Tu próxima aventura te espera</div></html>");
                 description1.setText("inicia sesión con tu información personal");
-                button.setText("INICIAR SESIÓN"); // Siempre "INICIAR SESIÓN" según tus imágenes
+                button.setText("INICIA SESIÓN");
             }
             this.isLogin = login;
         }
-    }
-
+     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables
 }

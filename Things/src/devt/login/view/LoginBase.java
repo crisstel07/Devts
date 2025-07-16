@@ -5,7 +5,6 @@ import devt.login.components.Message;
 import devt.login.components.PanelLoading;
 import devt.login.components.PanelLoginAndRegister;
 import devt.login.components.PanelVerifyCode;
-import devt.login.components.PanelCover; 
 
 // Librerias de Java de AWT Y Swing
 import java.awt.Graphics;
@@ -22,7 +21,6 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.util.HashMap;
 import java.util.Map;
-import java.net.URL; // Importar URL
 
 // Gson (para JSON)
 import com.google.gson.JsonObject;
@@ -34,14 +32,17 @@ import devt.login.apiFlask.ApiClient;
 import devt.login.apiFlask.ApiClient.ApiResponse;
 
 // Importaciones de tus paneles personalizados
+import devt.login.components.PanelCover;
 import devt.login.components.AlphaOverlayPanel; // Importación correcta
+import java.net.URL;
+import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 import org.jdesktop.animation.timing.*;
 import org.jdesktop.animation.timing.interpolation.PropertySetter;
 
 
 public class LoginBase extends javax.swing.JFrame {
 
-    private FondoPanel fondo; // Ahora será un JPanel simple para el fondo
+    private LoginBase.FondoPanel fondo; // Ahora será un JPanel simple para el fondo
     private MigLayout layout;
     private PanelCover cover;
     private PanelLoading loading;
@@ -50,7 +51,7 @@ public class LoginBase extends javax.swing.JFrame {
 
     private PanelLoginAndRegister loginAndRegister;
     private Animator animator;
-    private boolean isLogin = true; // true = panel derecho muestra Login, false = panel derecho muestra Register
+    private boolean isLogin; // true = login, false = register
     private final double addSize = 30;
     private final double coverSize = 45;
     private final double loginSize = 55;
@@ -92,7 +93,7 @@ public class LoginBase extends javax.swing.JFrame {
         this.setTitle("Juego RPG - Login"); // Título inicial
 
         // Creación y configuración del Fondo del panel.
-        fondo = new FondoPanel(); // Instancia de la clase interna FondoPanel (ahora un JPanel)
+        fondo = new LoginBase.FondoPanel(); // Instancia de la clase interna FondoPanel (ahora un JPanel)
         layout = new MigLayout("fill, insets 0");
         fondo.setLayout(layout);
         
@@ -166,8 +167,7 @@ public class LoginBase extends javax.swing.JFrame {
                 double fractionCover;
                 double fractionLogin;
                 double size = coverSize;
-
-                if (isLogin) { // Si el estado actual es Login (panel derecho muestra Login), vamos hacia Register
+                if (isLogin) { // Si el estado actual es Login, animar hacia Register
                     fractionCover = 1f - fraction;
                     fractionLogin = fraction;
                     if (fraction <= 0.5f) {
@@ -175,9 +175,7 @@ public class LoginBase extends javax.swing.JFrame {
                     } else {
                         size += addSize - fraction * addSize;
                     }
-                    // Animación del contenido del PanelCover (se mueve a la izquierda)
-                    cover.registerLeft(fraction); 
-                } else { // Si el estado actual es Register (panel derecho muestra Register), vamos hacia Login
+                } else { // Si el estado actual es Register, animar hacia Login
                     fractionCover = fraction;
                     fractionLogin = 1f - fraction;
                     if (fraction <= 0.5f) {
@@ -185,16 +183,11 @@ public class LoginBase extends javax.swing.JFrame {
                     } else {
                         size += addSize - fraction * addSize;
                     }
-                    // Animación del contenido del PanelCover (se mueve a la derecha)
-                    cover.loginRight(fraction); 
                 }
-                
+
                 // Actualizar la visibilidad de los paneles de login/registro durante la animación
-               if (fraction >= 0.5f && fraction - 0.01f < 0.5f) { // Activar solo una vez al cruzar el 0.5
-                    loginAndRegister.showLogin(!isLogin); // Alterna la vista de los campos de texto del panel derecho
-                    // NOTA: No llamamos cover.login(!isLogin) aquí.
-                    // Tu PanelCover ya tiene las llamadas a login(true/false) dentro de sus métodos de animación.
-                    // Si lo llamamos aquí, habría un conflicto.
+                if (fraction >= 0.5f) {
+                    loginAndRegister.showLogin(!isLogin);
                 }
 
                 // Actualizar las restricciones de layout para los componentes
@@ -205,10 +198,8 @@ public class LoginBase extends javax.swing.JFrame {
 
             @Override
             public void end() {
-                isLogin = !isLogin; // ¡INVERTIR EL ESTADO PRINCIPAL DE LOGINBASE AQUÍ, AL FINAL DE LA ANIMACIÓN!
-                // NOTA: No llamamos cover.login(isLogin) aquí.
-                // Tu PanelCover ya tiene las llamadas a login(true/false) dentro de sus métodos de animación.
-                // Si lo llamamos aquí, habría un conflicto.
+                // Al finalizar la animación, invertir el estado de isLogin
+                isLogin = !isLogin;
             }
         });
         animator.setAcceleration(0.5f);
@@ -241,7 +232,7 @@ public class LoginBase extends javax.swing.JFrame {
                     @Override
                     protected void done() {
                         loading.setVisible(false); // Oculta el panel de carga
-                        // overlayPanel.setVisible(false); // NO ocultar aquí, el showMessage lo maneja
+                        overlayPanel.setVisible(false); // Oculta el overlay
                         try {
                             ApiClient.ApiResponse result = get();
                             if (result.isSuccess()) {
@@ -250,18 +241,12 @@ public class LoginBase extends javax.swing.JFrame {
                                 verifyCode.clearFields(); // Limpia los campos de verificación
                                 
                                 // Después de verificar, redirigimos al login
-                                 showMessage(Message.MessageType.INFO, "Verificación exitosa. Por favor, inicia sesión."); // Ya se muestra un mensaje antes
+                                showMessage(Message.MessageType.INFO, "Verificación exitosa. Por favor, inicia sesión.");
                                 loginAndRegister.showLogin(true); // Muestra el panel de login
-                                  cover.login(true); // Call login(true) on PanelCover
-                                // Set the main frame's state to login
-                                isLogin = true;
                             } else {
-                                // Si la verificación falla, ocultamos el overlay y mostramos el mensaje de error
-                                overlayPanel.setVisible(false); 
                                 showMessage(Message.MessageType.ERROR, result.getMessage());
                             }
                         } catch (Exception ex) {
-                            overlayPanel.setVisible(false); // Oculta el overlay en caso de excepción
                             ex.printStackTrace();
                             showMessage(Message.MessageType.ERROR, "Error al procesar la verificación: " + ex.getMessage());
                         }
@@ -293,22 +278,22 @@ public class LoginBase extends javax.swing.JFrame {
             @Override
             protected void done() {
                 loading.setVisible(false); // Oculta el panel de carga
-                // overlayPanel.setVisible(false); // NO ocultar aquí, el showMessage lo maneja
+                overlayPanel.setVisible(false); // Oculta el overlay
+
                 try {
                     ApiClient.ApiResponse result = get();
                     if (result.isSuccess()) {
                         showMessage(Message.MessageType.SUCCESS, result.getMessage());
+                        // No es necesario currentRegisteredUserId si la verificación usa email
+                        // currentRegisteredUserId = result.getDataAsJsonObject().get("user_id").getAsInt(); 
                         verifyCode.setEmail(email); // Pasa el email al panel de verificación
-                        verifyCode.setVisible(true); // Muestra el panel de verificación
-                        // El overlayPanel permanece visible aquí porque verifyCode es un modal
-                        // No es necesario llamar a overlayPanel.setVisible(true) de nuevo aquí, ya está visible.
+                        verifyCode.setVisible(true);
+                        overlayPanel.setVisible(true); // Vuelve a mostrar el overlay para verifyCode
                         loginAndRegister.clearFields(); // Limpia los campos de registro
                     } else {
-                        overlayPanel.setVisible(false); // Oculta el overlay si el registro falla y no se muestra verifyCode
                         showMessage(Message.MessageType.ERROR, result.getMessage());
                     }
                 } catch (Exception ex) {
-                    overlayPanel.setVisible(false); // Oculta el overlay en caso de excepción
                     ex.printStackTrace();
                     showMessage(Message.MessageType.ERROR, "Error inesperado al registrar: " + ex.getMessage());
                 }
@@ -331,13 +316,14 @@ public class LoginBase extends javax.swing.JFrame {
         new SwingWorker<ApiClient.ApiResponse, Void>() {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
+                // ApiClient.loginUser ahora espera email y password
                 return ApiClient.loginUser(email, password);
             }
 
             @Override
             protected void done() {
                 loading.setVisible(false); // Oculta el panel de carga
-                // overlayPanel.setVisible(false); // NO ocultar aquí, el showMessage lo maneja
+                overlayPanel.setVisible(false); // Oculta el overlay
                 try {
                     ApiClient.ApiResponse result = get();
                     if (result.isSuccess()) {
@@ -350,11 +336,9 @@ public class LoginBase extends javax.swing.JFrame {
                         loadOrCreateCharacter();
 
                     } else {
-                        overlayPanel.setVisible(false); // Oculta el overlay si el login falla
                         showMessage(Message.MessageType.ERROR, result.getMessage());
                     }
                 } catch (Exception ex) {
-                    overlayPanel.setVisible(false); // Oculta el overlay en caso de excepción
                     ex.printStackTrace();
                     showMessage(Message.MessageType.ERROR, "Error inesperado al iniciar sesión: " + ex.getMessage());
                 }
@@ -377,16 +361,18 @@ public class LoginBase extends javax.swing.JFrame {
         new SwingWorker<ApiClient.ApiResponse, Void>() {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
+                // ApiClient.getOrCreateCharacterProfile espera int userId
                 return ApiClient.getOrCreateCharacterProfile(userId);
             }
 
             @Override
             protected void done() {
                 loading.setVisible(false); // Oculta el panel de carga
-                // overlayPanel.setVisible(false); // NO ocultar aquí, el showMessage lo maneja
+                overlayPanel.setVisible(false); // Oculta el overlay
                 try {
                     ApiClient.ApiResponse result = get();
                     if (result.isSuccess()) {
+                        // La API Flask devuelve un JsonObject 'character' directamente en 'data'
                         currentCharacterData = result.getDataAsJsonObject(); 
                         if (currentCharacterData != null) {
                             String characterName = currentCharacterData.has("nombre_personaje") && !currentCharacterData.get("nombre_personaje").isJsonNull()
@@ -407,12 +393,10 @@ public class LoginBase extends javax.swing.JFrame {
                          showMessage(Message.MessageType.INFO, "No tienes un personaje. ¡Crea uno ahora!");
                          showCharacterCreationScreen();
                     } else {
-                        overlayPanel.setVisible(false); // Oculta el overlay si falla y no va a otra pantalla
                         showMessage(Message.MessageType.ERROR, "Error al verificar personaje: " + result.getMessage());
                         performLogout(); // Si hay un error que no es 404, vuelve al login
                     }
                 } catch (Exception ex) {
-                    overlayPanel.setVisible(false); // Oculta el overlay en caso de excepción
                     ex.printStackTrace();
                     showMessage(Message.MessageType.ERROR, "Error inesperado al cargar/crear personaje: " + ex.getMessage());
                     performLogout();
@@ -452,7 +436,7 @@ public class LoginBase extends javax.swing.JFrame {
         }
 
         panelCharacterCreation.setVisible(true); // Hace visible el panel de creación
-        setTitle("JVEILWALKER - Crea tu Personaje");
+        setTitle("Juego RPG - Crea tu Personaje");
         revalidate(); // Revalida el JFrame para que los cambios de visibilidad se apliquen
         repaint(); // Repinta el JFrame
     }
@@ -470,48 +454,32 @@ public class LoginBase extends javax.swing.JFrame {
 
         if (mainMenuPanel == null) {
             mainMenuPanel = new ViewSystem(loggedInUserData, currentCharacterData);
-            System.out.println("DEBUG: mainMenuPanel inicializado."); // Nuevo mensaje de depuración
             // Añadir listeners a los botones de ViewSystem
             mainMenuPanel.addShowProfileListener(new ActionListener() { 
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    System.out.println("DEBUG: Botón 'Perfil' presionado."); // Depuración
                     showProfileScreen();
                 }
             });
             mainMenuPanel.addLogoutButtonListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    System.out.println("DEBUG: Botón 'Cerrar Sesión' presionado."); // Depuración
                     performLogout();
                 }
             });
-            // DEBUG: Añadir MouseListener al mainMenuPanel para verificar clics en el panel
-            mainMenuPanel.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override
-                public void mouseClicked(java.awt.event.MouseEvent evt) {
-                    System.out.println("DEBUG: Click detectado en mainMenuPanel en coordenadas: " + evt.getX() + ", " + evt.getY());
-                }
-            });
-            System.out.println("DEBUG: MouseListener añadido a mainMenuPanel."); // Nuevo mensaje de depuración
-
             // Agrega el menú principal al JLayeredPane en la capa por defecto
             this.getLayeredPane().add(mainMenuPanel, JLayeredPane.DEFAULT_LAYER);
             mainMenuPanel.setBounds(0, 0, getWidth(), getHeight());
-            System.out.println("DEBUG: mainMenuPanel añadido al JLayeredPane ysetBounds."); // Nuevo mensaje de depuración
-
         } else {
             // Si el panel ya existe, actualiza sus datos
             mainMenuPanel.updateUserData(loggedInUserData);
             mainMenuPanel.updateCharacterData(currentCharacterData);
-            System.out.println("DEBUG: mainMenuPanel ya existía, datos actualizados."); // Nuevo mensaje de depuración
         }
 
         mainMenuPanel.setVisible(true); // Hace visible el menú principal
-        setTitle("VEILKALWER - Menú Principal");
+        setTitle("Juego RPG - Menú Principal");
         revalidate();
         repaint();
-        System.out.println("DEBUG: mainMenuPanel debería estar visible y activo."); // Nuevo mensaje de depuración
     }
         
     // Método para mostrar la pantalla de perfil e inventario
@@ -543,7 +511,6 @@ public class LoginBase extends javax.swing.JFrame {
             panelProfileAndInventory.addLogoutActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    System.out.println("DEBUG: Botón 'Cerrar Sesión' presionado desde Perfil."); // Depuración
                     performLogout(); // Llama a performLogout()
                 }
             });
@@ -556,14 +523,13 @@ public class LoginBase extends javax.swing.JFrame {
         panelProfileAndInventory.loadData(this.currentCharacterData); 
 
         panelProfileAndInventory.setVisible(true);
-        setTitle("VEILWALWER - Perfil e Inventario");
+        setTitle("Juego RPG - Perfil e Inventario");
         revalidate();
         repaint();
     }
 
 
     private void showMessage(Message.MessageType messageType, String message) {
-        System.out.println("DEBUG: showMessage() llamado con tipo: " + messageType + ", mensaje: " + message); // Depuración
         Message ms = new Message();
         ms.showMessage(messageType, message);
         TimingTarget target = new TimingTargetAdapter() {
@@ -571,13 +537,14 @@ public class LoginBase extends javax.swing.JFrame {
             public void begin() {
                 if (!ms.isShow()) {
                     // Asegúrate de que 'fondo' esté visible y sea el contenedor correcto
-                    // para añadir el mensaje. Si fondo es un JLayeredPane, se comporta diferente.
-                    // Si fondo es un JPanel, debe estar en un JLayeredPane del JFrame:
-                    getLayeredPane().add(ms, JLayeredPane.POPUP_LAYER); // Añadir a una capa superior
-                    ms.setBounds( (getWidth() - ms.getPreferredSize().width) / 2, 10, ms.getPreferredSize().width, ms.getPreferredSize().height); // Posición Y en 10
+                    // para añadir el mensaje. Si fondo está oculto, el mensaje no se verá.
+                    // Si fondo es un JLayeredPane, se comporta diferente.
+                    // Si fondo es un JPanel, debe estar en un JLayeredPane del JFrame.
+                    // Asumiendo que fondo es un JPanel y está en el JLayeredPane del JFrame:
+                    getLayeredPane().add(ms, JLayeredPane.PALETTE_LAYER); // Añadir a una capa superior
+                    ms.setBounds( (getWidth() - ms.getPreferredSize().width) / 2, -30, ms.getPreferredSize().width, ms.getPreferredSize().height);
                     ms.setVisible(true);
                     getLayeredPane().repaint();
-                    System.out.println("DEBUG: Mensaje añadido al JLayeredPane y visible."); // Depuración
                 }
             }
 
@@ -617,7 +584,6 @@ public class LoginBase extends javax.swing.JFrame {
                                     getLayeredPane().remove(ms); // Elimina el mensaje al final de la animación de salida
                                     getLayeredPane().revalidate();
                                     getLayeredPane().repaint();
-                                    System.out.println("DEBUG: Mensaje eliminado del JLayeredPane."); // Depuración
                                 }
                             });
                             exitAnimator.setResolution(0);
@@ -648,66 +614,44 @@ public class LoginBase extends javax.swing.JFrame {
         currentCharacterData = null;
         currentRegisteredUserId = null;
         
-        System.out.println("DEBUG: Datos de usuario y personaje limpiados. loggedInUserData: " + loggedInUserData + ", currentCharacterData: " + currentCharacterData); // Depuración
-
         // Oculta todos los paneles de juego y auxiliares
-        if (mainMenuPanel != null) {
-            mainMenuPanel.setVisible(false);
-            System.out.println("DEBUG: mainMenuPanel oculto.");
-        } else {
-            System.out.println("DEBUG: mainMenuPanel es NULL, no se puede ocultar.");
-        }
-        if (panelProfileAndInventory != null) {
-            panelProfileAndInventory.setVisible(false);
-            System.out.println("DEBUG: panelProfileAndInventory oculto.");
-        }
-        if (panelCharacterCreation != null) {
-            panelCharacterCreation.setVisible(false);
-            System.out.println("DEBUG: panelCharacterCreation oculto.");
-        }
+        if (mainMenuPanel != null) mainMenuPanel.setVisible(false);
+        if (panelProfileAndInventory != null) panelProfileAndInventory.setVisible(false);
+        if (panelCharacterCreation != null) panelCharacterCreation.setVisible(false);
         loading.setVisible(false);
         verifyCode.setVisible(false);
         overlayPanel.setVisible(false);
-        System.out.println("DEBUG: Paneles auxiliares ocultos.");
 
         // Asegúrate de que el fondo y los paneles de login/registro estén en el JLayeredPane
         // y sean visibles.
         // Primero, limpia todos los componentes del JLayeredPane para evitar duplicados
         getLayeredPane().removeAll();
-        System.out.println("DEBUG: JLayeredPane limpiado.");
         
         // Vuelve a añadir el fondo y los paneles de login/registro
         getLayeredPane().add(fondo, JLayeredPane.DEFAULT_LAYER);
         fondo.setBounds(0, 0, getWidth(), getHeight());
         fondo.setVisible(true); // Asegúrate de que el fondo sea visible
-        System.out.println("DEBUG: Fondo añadido y visible.");
 
         // Vuelve a añadir los paneles de carga y verificación a la capa POPUP_LAYER
         getLayeredPane().add(loading, JLayeredPane.POPUP_LAYER);
         getLayeredPane().add(verifyCode, JLayeredPane.POPUP_LAYER);
         getLayeredPane().add(overlayPanel, JLayeredPane.POPUP_LAYER);
-        System.out.println("DEBUG: Paneles auxiliares re-añadidos a POPUP_LAYER.");
         
         // Asegura que el panel de login/registro se muestre correctamente
         // El `fondo` ya los contiene y su `MigLayout` los gestiona.
         // Solo necesitamos asegurarnos de que el estado de `isLogin` sea el correcto para la animación inicial.
         isLogin = true; // Establece el estado para que la animación vaya a login
         loginAndRegister.showLogin(true); // Asegura que el panel de login esté visible
-        cover.login(true); // Asegura que el PanelCover muestre el contenido de "¡Oye, crack!"
-        System.out.println("DEBUG: loginAndRegister.showLogin(true) y cover.login(true) llamados.");
 
         // Limpiar campos de login/registro
         loginAndRegister.clearFields();
         verifyCode.clearFields(); 
-        System.out.println("DEBUG: Campos de login/registro/verificación limpiados.");
         
         setTitle("Juego RPG - Login");
         revalidate();
         repaint();    
         showMessage(Message.MessageType.INFO, "Sesión cerrada exitosamente.");
-        System.out.println("DEBUG: performLogout() completado.");
     }
-
 
     // EL initComponents()  PARA UN JFRAME
     @SuppressWarnings("unchecked")
@@ -725,9 +669,7 @@ public class LoginBase extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables
 
-     // Clase interna FondoPanel para el fondo de la ventana principal
-   
-    // Clase interna FondoPanel para el fondo de la ventana principal
+         // Clase interna FondoPanel para el fondo de la ventana principal
     // Ahora es un JPanel simple, no un JLayeredPane, para simplificar la gestión de capas.
     class FondoPanel extends JPanel {
         private Image imagen;
@@ -736,19 +678,12 @@ public class LoginBase extends javax.swing.JFrame {
             setOpaque(true); // Asegura que el panel dibuje su fondo
             try {
                 // Asegúrate de que esta ruta sea correcta para tu imagen de fondo principal
-                URL imageUrl = getClass().getResource("/devt/login/images/guzz_1.png"); // Obtener la URL
-                if (imageUrl != null) { // Verificar si la URL no es nula
-                    imagen = new ImageIcon(imageUrl).getImage();
-                } else {
-                    // Si la URL es nula, significa que la imagen no se encontró en el classpath
-                    System.err.println("Error: No se encontró la imagen de fondo en la ruta: /devt/login/images/guzz_1.png");
-                    setBackground(new Color(20, 20, 20)); // Usar un color de fondo si la imagen falla
-                }
+                imagen = new ImageIcon(getClass().getResource("/devt/login/images/guzz_1.png")).getImage();
             } catch (Exception e) {
                 System.err.println("Error al cargar imagen de fondo: " + e.getMessage());
-                    setBackground(new Color(20, 20, 20)); // Fondo de color si la imagen falla
-                }
+                setBackground(new Color(20, 20, 20)); // Fondo de color si la imagen falla
             }
+        }
 
         @Override
         protected void paintComponent(Graphics g) {
