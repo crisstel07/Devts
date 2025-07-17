@@ -24,7 +24,7 @@ public class ViewSystem extends JPanel {
 
     private Image backgroundImage;
     private Font newboroughFont; // Variable para la fuente Newborough
-    private Font pixelateFont;   // Variable para la fuente Pixelate
+    private Font pixelateFont;    // Variable para la fuente Pixelate
 
     public ViewSystem(JsonObject userData, JsonObject characterData) {
         this.loggedInUserData = userData;
@@ -34,7 +34,7 @@ public class ViewSystem extends JPanel {
         // ¡IMPORTANTE! Asegúrate de que los archivos sean .ttf o .otf y que los nombres coincidan exactamente.
         // Renombra tus archivos de fuente a "Newborough.ttf" y "pixelate.ttf" en la carpeta fonts
         newboroughFont = loadCustomFont("PlayfairDisplay-Italic.ttf", 90f); // Tamaño para que resalte más
-        pixelateFont = loadCustomFont("pixelates.ttf", 20f);     // Tamaño para botones
+        pixelateFont = loadCustomFont("pixelates.ttf", 20f);       // Tamaño para botones
 
         // Diagnóstico de fuentes después de la carga
         System.out.println("--- Diagnóstico de Fuentes ---");
@@ -68,7 +68,7 @@ public class ViewSystem extends JPanel {
 
         // Etiqueta de bienvenida - Usando Newborough
         welcomeLabel = new JLabel();
-        welcomeLabel.setFont(newboroughFont); 
+        welcomeLabel.setFont(newboroughFont);
         welcomeLabel.setForeground(new Color(255, 215, 0)); // Color dorado
         welcomeLabel.setHorizontalAlignment(SwingConstants.CENTER); // Centrar el texto
         // Espaciado solo para la bienvenida, para separarla de los botones
@@ -94,7 +94,7 @@ public class ViewSystem extends JPanel {
 
         // Botones - Usando Pixelate
         btnPlay = createStyledButton("Jugar", pixelateFont);
-        btnPlay.addActionListener(e -> JOptionPane.showMessageDialog(this, "¡Iniciando el juego!", "Jugar", JOptionPane.INFORMATION_MESSAGE));
+        // btnPlay.addActionListener(e -> JOptionPane.showMessageDialog(this, "¡Iniciando el juego!", "Jugar", JOptionPane.INFORMATION_MESSAGE)); // Esta línea se elimina
         add(btnPlay, gbc);
 
         gbc.gridy++; // Siguiente fila
@@ -107,7 +107,7 @@ public class ViewSystem extends JPanel {
         add(btnSettings, gbc);
 
         gbc.gridy++; // Siguiente fila
-        btnLogout = createStyledButton("Cerrar Sesión", pixelateFont); 
+        btnLogout = createStyledButton("Cerrar Sesión", pixelateFont);
         add(btnLogout, gbc);
         
         // Añadir un "pegamento" vertical al final para empujar todo hacia arriba si hay espacio

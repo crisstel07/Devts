@@ -1,6 +1,7 @@
-package Main;
+package devt.login.view;
 
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 public class SplashScreen extends javax.swing.JFrame {
 
@@ -88,124 +89,86 @@ public class SplashScreen extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
+
+     public void startSplash(Runnable onFinishCallback) {
+        // Asegurarse de que esta instancia sea visible
+        this.setVisible(true);
+        // Asegurarse de que la barra de progreso sea visible durante la animación
+        Loading.setVisible(true); 
+
+        new Thread(() -> {
+            try {
+                for (int i = 0; i <= 100; i++) { 
+                    Thread.sleep(100); // Pausa de 100ms para la animación
+
+                    // Todas las actualizaciones de la UI deben hacerse en el Event Dispatch Thread (EDT)
+                    final int progress = i; // Necesario para usar 'i' dentro del lambda
+                    SwingUtilities.invokeLater(() -> {
+                        Loading.setValue(progress);
+                        Loading.setToolTipText(progress + "%"); 
+
+                        // Actualizar etiquetas de texto según el progreso
+                        if (progress == 0) {
+                            lblLoading.setText(" ");
+                            lblLoading1.setText("Tu presencia ha");
+                            lblLoading3.setText("sido notificada");
+                            lblLoading2.setText("a las criaturas.");
+                            lblLoading4.setText("Aún estás a tiempo ");
+                            lblLoading5.setText("de retroceder.");
+                        } else if (progress == 10) {
+                            lblLoading6.setText(" ");
+                        } else if (progress == 20) {
+                            lblLoading6.setText("Ingresando al velo...");
+                        } else if (progress == 25) {
+                            lblLoading.setText(" ");
+                            lblLoading1.setText("Este boleto no");
+                            lblLoading3.setText("garantiza retorno.");
+                            lblLoading2.setText("Ninguno lo hace, ");
+                            lblLoading4.setText("en realidad.");
+                            lblLoading5.setText(" ");
+                        } else if (progress == 30) {
+                            lblLoading6.setText(" ");
+                        } else if (progress == 40) {
+                            lblLoading6.setText("Ingresando al velo...");
+                        } else if (progress == 50) {
+                            lblLoading.setText(" ");
+                            lblLoading1.setText("No abras la puerta");
+                            lblLoading3.setText("si oyes que alguien");
+                            lblLoading2.setText("llama. Aunque use");
+                            lblLoading4.setText("tu nombre.");
+                            lblLoading5.setText(" ");
+                            lblLoading6.setText(" ");
+                        } else if (progress == 60) {
+                            lblLoading6.setText("Ingresando al velo...");
+                        } else if (progress == 70) {
+                            lblLoading6.setText(" ");
+                        } else if (progress == 75) {
+                            lblLoading.setText(" ");
+                            lblLoading1.setText("El vagón asignado");
+                            lblLoading3.setText("te recuerda...");
+                            lblLoading2.setText("pero no con afecto.");
+                            lblLoading4.setText("");
+                            lblLoading5.setText(" ");
+                        } else if (progress == 80) {
+                            lblLoading6.setText("Ingresando al velo...");
+                        } else if (progress == 90) {
+                            lblLoading6.setText(" ");
+                        }
+                    });
                 }
+            } catch (Exception e) {
+                // Mostrar el mensaje de error en el EDT
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, e.getMessage()));
+            } finally {
+                // Asegurarse de que dispose() y el callback se ejecuten en el EDT
+                SwingUtilities.invokeLater(() -> {
+                    dispose(); // Cierra esta ventana de SplashScreen
+                    if (onFinishCallback != null) {
+                        onFinishCallback.run(); // Ejecuta el callback proporcionado
+                    }
+                });
             }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(SplashScreen.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(SplashScreen.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(SplashScreen.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(SplashScreen.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-        new SplashScreen().mostrar();
-    }
-
-    public void mostrar() {
-        SplashScreen s1 = new SplashScreen();
-        s1.setVisible(true);
-
-        try {
-            for (int i = 0; i < 100; i++) {
-                Thread.sleep(100);
-                s1.Loading.setToolTipText(i + "%");
-
-                if (i == 0) {
-                    s1.lblLoading.setText(" ");
-                    s1.lblLoading1.setText("Tu presencia ha");
-                    s1.lblLoading3.setText("sido notificada");
-                    s1.lblLoading2.setText("a las crianturas.");
-                    s1.lblLoading4.setText("Aún estás a tiempo ");
-                    s1.lblLoading5.setText("de retroceder.");
-                }
-
-                if (i == 10) {
-                    s1.lblLoading6.setText(" ");
-                }
-
-                if (i == 20) {
-                    s1.lblLoading6.setText("Ingresando al velo...");
-                }
-
-                if (i == 25) {
-                    s1.lblLoading.setText(" ");
-                    s1.lblLoading1.setText("Este boleto no");
-                    s1.lblLoading3.setText("garantiza retorno.");
-                    s1.lblLoading2.setText("Ninguno lo hace, ");
-                    s1.lblLoading4.setText("en realidad.");
-                    s1.lblLoading5.setText(" ");
-                }
-
-                if (i == 30) {
-                    s1.lblLoading6.setText(" ");
-                }
-
-                if (i == 40) {
-                    s1.lblLoading6.setText("Ingresando al velo...");
-                }
-
-                if (i == 50) {
-                    s1.lblLoading.setText(" ");
-                    s1.lblLoading1.setText("No abras la puerta");
-                    s1.lblLoading3.setText("si oyes que alguien");
-                    s1.lblLoading2.setText("llama. Aunque use");
-                    s1.lblLoading4.setText("tu nombre.");
-                    s1.lblLoading5.setText(" ");
-                    s1.lblLoading6.setText(" ");
-                }
-
-                if (i == 60) {
-                    s1.lblLoading6.setText("Ingresando al velo...");
-                }
-
-                if (i == 70) {
-                    s1.lblLoading6.setText(" ");
-                }
-
-                if (i == 75) {
-
-                    s1.lblLoading.setText(" ");
-                    s1.lblLoading1.setText("El vagón asignado");
-                    s1.lblLoading3.setText("te recuerda...");
-                    s1.lblLoading2.setText("pero no con afecto.");
-                    s1.lblLoading4.setText("");
-                    s1.lblLoading5.setText(" ");
-                }
-
-                if (i == 80) {
-                    s1.lblLoading6.setText("Ingresando al velo...");
-                }
-
-                if (i == 90) {
-                    s1.lblLoading6.setText(" ");
-                }
-
-                s1.Loading.setValue(i);
-
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, e);
-        }
-
-        s1.dispose();
-        //new Juego().setVisible(true);
-
+        }).start(); // Inicia el hilo de la animación
     }
 
 
