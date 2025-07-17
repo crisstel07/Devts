@@ -11,6 +11,8 @@ public abstract class EscenarioBase {
     protected int anchoFondo;
     protected int altoFondo;
     protected Suelo suelo;
+    private double balanceoAngulo = 0;
+private int desplazamientoY = 0;
 
     public  final List<EnemigoBase> enemigos = new ArrayList<>();
     private List<EnemigoBase> enemigosPendientes = new ArrayList<>();
@@ -21,10 +23,17 @@ public abstract class EscenarioBase {
     }
     }
 
+
     public int getAnchoTotal() {
         return repeticiones * anchoFondo;
     }
-
+    public abstract void cargarEnemigos();
+    
+public void reiniciarEscenario() {
+        enemigos.clear();
+        enemigosPendientes.clear();
+        cargarEnemigos(); // 🔁 vuelve a meter los enemigos
+    }
     
     public abstract void dibujarFondo(Graphics g, int camaraX, int anchoVentana, int altoVentana);
 
@@ -64,6 +73,9 @@ public abstract class EscenarioBase {
 }
     public boolean permiteSalida() {
     return true;
+}
+public int getLimiteEscenario() {
+    return getAnchoTotal();  // por defecto, el escenario es tan ancho como sus repeticiones
 }
 
 }

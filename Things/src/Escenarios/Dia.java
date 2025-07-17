@@ -10,6 +10,7 @@ import Enemigos.*;
 public class Dia extends EscenarioBase {
     private BufferedImage fondo;
     private Suelo suelo;
+    private Cielo cielo;
     private int repeticionesInternas;
     private Jugador jugador;
 
@@ -26,12 +27,20 @@ public class Dia extends EscenarioBase {
             e.printStackTrace();
         }
         suelo = new Suelo("/Graficos/SueloDia.png");
-
+        cielo = new Cielo("/Graficos/CieloDia.png");
         // 👇️ Aquí defines los enemigos SOLO de este escenario
-         
-        enemigos.add(new Darker(2000, 617, jugador));
+         cargarEnemigos();
+       
     }
-
+@Override
+    public void cargarEnemigos() {
+        enemigos.clear();
+         enemigos.add(new Fargano(1050, 617, jugador, this));
+        enemigos.add(new Darker(2000, 617, jugador));
+         enemigos.add(new Darker(2500, 617, jugador));
+         enemigos.add(new Fargano(2900, 617, jugador, this));
+         
+    }
     @Override
     public void dibujarFondo(Graphics g, int camaraX, int anchoVentana, int altoVentana) {
         for (int i = 0; i < repeticionesInternas; i++) {
@@ -43,7 +52,8 @@ public class Dia extends EscenarioBase {
     @Override
     public void dibujarElementos(Graphics g, int camaraX) {
         suelo.dibujar(g, camaraX);
-        
+        cielo.actualizar();
+        cielo.dibujar(g);
     }
 
     @Override

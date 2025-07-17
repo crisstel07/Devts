@@ -1,13 +1,15 @@
 package Controles;
 
+import Sonido.GestorAudio;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 //Clase que hereda de KeyListener para que pueda "escuchar" al teclado 
 public class Teclado implements KeyListener {
 
-    public boolean izquierda, derecha, arriba, abajo, saltar, mostrarHitbox;
+    public static boolean izquierda, derecha, arriba, abajo, saltar, mostrarHitbox;
 public boolean curar = false;
+
     @Override
     public void keyTyped(KeyEvent e) {
     }
@@ -19,6 +21,7 @@ public boolean curar = false;
 
         if (tecla == KeyEvent.VK_SPACE) {
             saltar = true;
+             GestorAudio.reproducirEfecto("salto");
         }
 
         if (tecla == KeyEvent.VK_A) {
@@ -79,6 +82,15 @@ public boolean curar = false;
     curar = false;
     saltar=false;
 }
+    
+    public static void bloquear(){
+          izquierda = false;
+    derecha = false;
+    arriba = false;
+    abajo = false;
+    saltar = false;
+    saltar=false;
+    }
 
 
 }

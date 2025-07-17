@@ -5,12 +5,13 @@ import java.awt.event.MouseEvent;
 
 public class Mouse extends MouseAdapter {
 
-    public boolean atacar = false;
+    public static boolean atacar = false;
 
     @Override
     public void mousePressed(MouseEvent e) {
         if (e.getButton() == MouseEvent.BUTTON1) {
             atacar = true;
+            
         }
     }
 
@@ -19,5 +20,9 @@ public class Mouse extends MouseAdapter {
         if (e.getButton() == MouseEvent.BUTTON1) {
             atacar = false;
         }
+    }
+    
+    public static void resetear(){
+        atacar = false;
     }
 }

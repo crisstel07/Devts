@@ -4,11 +4,12 @@ import javax.swing.*;
 
 //Creamos la clase que hereda de JFrame
 public class VentanaJuego extends JFrame {
-
+public static String titulo = "VEILWAKER - DEMO";
     //Constructor de la clase
     public VentanaJuego() {
         //Titulo de la ventana
-        this.setTitle("VEILWAKER");
+        
+        this.setTitle(titulo);
         //Tamaño de la ventana
         this.setSize(1365, 767);
         //Operacion para cerrar el JFrame
@@ -19,6 +20,7 @@ public class VentanaJuego extends JFrame {
         this.setLocationRelativeTo(null);
         //Que el JFrame sea visible
         this.setVisible(true);
+        
 
         //Agregamos al constructor el PanelJuego para que pueda ser llamado por la clase Main
         PanelJuego panelJuego = new PanelJuego();

@@ -5,215 +5,193 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.List;
-import Sonido.Sonido;
+import Controles.*;
+import Sonido.*;
+import Escenarios.*;
 
 public class Jugador {
 
-    // ============================================================
-    // 🟣 1. POSICIÓN Y MOVIMIENTO BÁSICO
-    // ============================================================
+    //1. ATRIBUTOS JUGADOR
     public int x, y;
     private int velocidadX = 0;
+    private int vidas = 5;
+    private final int VELOCIDAD_MOVIMIENTO = 7;
+    private final int FUERZA_SALTO = -20;
     private int velocidadY = 0;
-
     private final int ANCHO = 120;
     private final int ALTO = 130;
+    private boolean estaCaminando = false;
+    private long ultimoPasoTiempo = 0;
+    private long intervaloPaso = 330;
+    // Control de cooldown de ataque
+private boolean puedeAtacar = true;
+private long tiempoUltimoAtaque = 0;
+private final long COOLDOWN_ATAQUE = 1000000000L; // 1 segundo en nanosegundos
+long ahora = System.nanoTime();
 
-  
-
-    // ============================================================
-    // 🟣 2. ESTADO DEL JUGADOR
-    // ============================================================
-    private enum Estado {
-        IDLE,
-        CAMINANDO_DERECHA,
-        CAMINANDO_IZQUIERDA,
-        SALTANDO,
-        ATERRIZANDO,
-        DAÑADO,
-        MUERTO,
-        RENACIENDO
-
+    //ESTADO DEL JUGADOR
+    public enum Estado {
+        IDLE, CAMINANDO_DERECHA, CAMINANDO_IZQUIERDA, SALTANDO, ATERRIZANDO, DAÑADO, MUERTO, RENACIENDO
     }
-
-    public enum EstadoJuego {
-        JUGANDO,
-        MURIENDO,
-        FADE_OUT,
-        REINICIANDO
-    }
-
-    private Estado estado = Estado.IDLE;
-
+    public static Estado estado = Estado.IDLE;
     private boolean mirandoDerecha = true;
 
-    // ============================================================
-    // 🟣 3. VIDA Y DAÑO
-    // ============================================================
-    private boolean invulnerable = false;
+    //ESTADO DEL JUEGO
+    public enum EstadoJuego {
+        JUGANDO, MURIENDO, FADE_OUT, REINICIANDO
+    }
+    //VIDA, DAÑO, CARGA
+    public boolean invulnerable = false;
     private int timerInvulnerable = 0;
-
+    private int cantidad;
     private int fasesLunares = 1;  // empieza en vacía
-    private final int FASES_LUNARES_MAX = 5;
-
+    private final int FASES_LUNARES_MAX = 6;
     private boolean cargandoCuracion = false;
-    private Animacion curacionAnim;
-
-    // ================================
-// 3.5 SPRITES HUD
-// ================================
+    private final int DURACION_INVULNERABLE_DEFAULT = 120;
+    private int retrocesoX = 0;
+    private final int VIDA_MAXIMA = 5;
+//SPRITES Y HUD
     private BufferedImage[] fasesLunaresSprites;
     private BufferedImage[] gatosIdleSprites;
     private BufferedImage[] gatosPerderSprites;
     private BufferedImage[] gatosRecuperarSprites;
-
-// Estados
-    private int vidas = 2;
-
     private Animacion gatosIdleAnim;
     private Animacion gatosPerderAnim;
     private Animacion gatosRecuperarAnim;
+    private Animacion curacionAnim;
     private boolean animandoPerderVida = false;
     private boolean animandoRecuperarVida = false;
 
-    // Se define automáticamente con la animación de daño
-    private final int DURACION_INVULNERABLE_DEFAULT = 120;
-
-    private int retrocesoX = 0;
-
+    // FÍSICA Y GRAVEDAD
     // ============================================================
-    // 🟣 4. FÍSICA Y GRAVEDAD
-    // ============================================================
-    private final int VELOCIDAD_MOVIMIENTO = 7;
-    private final int FUERZA_SALTO = -20;
     private final double GRAVEDAD = 1;
-
     private final int SUELO_Y = PanelJuego.ALTO - 150 - ALTO;
     private boolean enSuelo = false;
 
-    // ============================================================
-    // 🟣 5. HITBOX DE CUERPO
-    // ============================================================
+    // TAMAÑOS Y OFFSETS PARA HITBOX
     private final int OFFSET_HITBOX_X = 25;
     private final int OFFSET_HITBOX_Y = 10;
     private final int HITBOX_ANCHO = ANCHO - 60;
     private final int HITBOX_ALTO = ALTO - 10;
 
-    // ============================================================
-    // 🟣 6. ATAQUES Y ANIMACIONES DE ATAQUE
-    // ============================================================
+    // LOGICA DE ATAQUES
     private boolean atacarArriba = false;
     private boolean atacarAbajo = false;
     private boolean estaAtacando = false;
     private int blinkTimer = 0;
-
+    //Animaciones de ataque
     private Animacion ataqueNormalAnim;
     private Animacion ataqueArribaAnim;
     private Animacion ataqueAbajoAnim;
     private Animacion ataqueActualAnim = null;
-
     // Parámetros para dibujar el ataque
     private final double ESCALA_ATAQUE = 0.4;
     private final int OFFSET_DIBUJO_ATAQUE_DERECHA_X = +20;
     private final int OFFSET_DIBUJO_ATAQUE_IZQUIERDA_X = -150;
     private final int OFFSET_DIBUJO_ATAQUE_Y = +5;
 
-    //Offsets de curación
-    private int curacionAncho = ANCHO;
-    private int curacionAlto = ALTO;
+    //OFFSETS DE CURACION
     private int curacionOffsetX = 0;
     private int curacionOffsetY = -4;
-    // ============================================================
-    // 🟣 7. ANIMACIONES DE MOVIMIENTO Y DAÑO
-    // ============================================================
+
+    //ANIMACIONES DE MOVIMIENTO Y DAÑO
     private Animacion idleAnim;
     private Animacion caminarAnim;
     private Animacion saltoAnim;
     private Animacion danoAnim;
     private Animacion muerteAnim;
-    private Animacion renacerAnim;
+    public Animacion renacerAnim;
 
-    // ============================================================
-// 🟣 7.5 FASES LUNARES
-// ============================================================
-    private final int VIDA_MAXIMA = 10;
-
-    // ============================================================
-    // 🟣 8. CONSTRUCTOR
-    // ============================================================
+    // CONSTRUCTOR
     public Jugador() {
         x = 50;
         y = SUELO_Y;
-        cargarAnimaciones();
         try {
+            cargarAnimaciones();
             cargarHUDSprites();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-public void reiniciar() {
-    this.x = 100;
-    this.y = SUELO_Y;
-    this.vidas = VIDA_MAXIMA;
-    this.fasesLunares = 1;
-    this.estado = Estado.IDLE;
-    
-    invulnerable = false;
-    estaAtacando = false;
-    cargandoCuracion = false;
-    enSuelo = true;
-    mirandoDerecha = true;
 
-    velocidadX = 0;
-    velocidadY = 0;
-    retrocesoX = 0;
+    public void reiniciar() {
+        estado = estado.RENACIENDO;
+        this.x = 100;
+        this.y = SUELO_Y;
+        this.vidas = VIDA_MAXIMA;
+        this.fasesLunares = 1;
+        estaAtacando = false;
+        cargandoCuracion = false;
+        enSuelo = true;
+        mirandoDerecha = true;
+        velocidadX = 0;
+        velocidadY = 0;
+        retrocesoX = 0;
+        animandoPerderVida = false;
+        animandoRecuperarVida = false;
+        blinkTimer = 0;
+        timerInvulnerable = 0;
+        // Reiniciar animaciones
+        if (muerteAnim != null) {
+            muerteAnim.reiniciar();
+        }
+        if (idleAnim != null) {
+            idleAnim.reiniciar();
+        }
+        if (caminarAnim != null) {
+            caminarAnim.reiniciar();
+        }
+        if (saltoAnim != null) {
+            saltoAnim.reiniciar();
+        }
+        if (ataqueNormalAnim != null) {
+            ataqueNormalAnim.reiniciar();
+        }
+        if (ataqueArribaAnim != null) {
+            ataqueArribaAnim.reiniciar();
+        }
+        if (ataqueAbajoAnim != null) {
+            ataqueAbajoAnim.reiniciar();
+        }
+        if (danoAnim != null) {
+            danoAnim.reiniciar();
+        }
+        if (curacionAnim != null) {
+            curacionAnim.reiniciar();
+        }
+        if (renacerAnim != null) {
+            renacerAnim.reiniciar();
+        }
+        if (gatosIdleAnim != null) {
+            gatosIdleAnim.reiniciar();
+        }
+        if (gatosPerderAnim != null) {
+            gatosPerderAnim.reiniciar();
+        }
+        if (gatosRecuperarAnim != null) {
+            gatosRecuperarAnim.reiniciar();
+        }
+    }
 
-    animandoPerderVida = false;
-    animandoRecuperarVida = false;
-
-    blinkTimer = 0;
-    timerInvulnerable = 0;
-
-    // Reiniciar animaciones
-    if (muerteAnim != null) muerteAnim.reiniciar();
-    if (idleAnim != null) idleAnim.reiniciar();
-    if (caminarAnim != null) caminarAnim.reiniciar();
-    if (saltoAnim != null) saltoAnim.reiniciar();
-    if (ataqueNormalAnim != null) ataqueNormalAnim.reiniciar();
-    if (ataqueArribaAnim != null) ataqueArribaAnim.reiniciar();
-    if (ataqueAbajoAnim != null) ataqueAbajoAnim.reiniciar();
-    if (danoAnim != null) danoAnim.reiniciar();
-    if (curacionAnim != null) curacionAnim.reiniciar();
-    if (renacerAnim != null) renacerAnim.reiniciar();
-
-    if (gatosIdleAnim != null) gatosIdleAnim.reiniciar();
-    if (gatosPerderAnim != null) gatosPerderAnim.reiniciar();
-    if (gatosRecuperarAnim != null) gatosRecuperarAnim.reiniciar();
-}
-
-
-    // ============================================================
-    // 🟣 9. CARGA DE ANIMACIONES
-    // ============================================================
+    // CARGA DE ANIMACIONES DEL JUGADOR
     private void cargarAnimaciones() {
         try {
             idleAnim = new Animacion(cargarSprites("idle", 4), 50, true);
             caminarAnim = new Animacion(cargarSprites("walk", 9), 8, true);
             saltoAnim = new Animacion(cargarSprites("jump", 12), 10, false);
-
             ataqueNormalAnim = new Animacion(cargarSprites("attack", 7), 4, false);
             ataqueArribaAnim = new Animacion(cargarSprites("Ataquearriba", 5), 4, false);
             ataqueAbajoAnim = new Animacion(cargarSprites("ataqueabajo", 4), 4, false);
             danoAnim = new Animacion(cargarSprites("Dano", 21), 3, false);
-            muerteAnim = new Animacion(cargarSprites("MuerteRe", 16), 6, false);
-            curacionAnim = new Animacion(cargarSprites("CurarsePerso", 11), 6, false);
+            muerteAnim = new Animacion(cargarSprites("MuerteRe", 16), 12, false);
+            curacionAnim = new Animacion(cargarSprites("CurarsePerso", 11), 9, false);
             renacerAnim = new Animacion(cargarSprites("Renacer", 10), 5, false);
-
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    //CARGAR LOS SPRITES DEL JUGADOR
     private BufferedImage[] cargarSprites(String nombreAnimacion, int cantidad) throws IOException {
         BufferedImage[] sprites = new BufferedImage[cantidad];
         for (int i = 0; i < cantidad; i++) {
@@ -222,23 +200,22 @@ public void reiniciar() {
         return sprites;
     }
 
+    //CARGAR LOS SPRITES DEL HUD
     private void cargarHUDSprites() throws IOException {
         // FASES LUNARES
         fasesLunaresSprites = new BufferedImage[5];
         for (int i = 0; i < 5; i++) {
             fasesLunaresSprites[i] = ImageIO.read(getClass().getResource("/Graficos/Sprites/Hud/cargaSuper_" + i + ".png"));
         }
-
-        // GATOS - animaciones
         gatosIdleSprites = cargarSpritesHUD("/Graficos/Sprites/Hud/idleVidas_", 2);
         gatosPerderSprites = cargarSpritesHUD("/Graficos/Sprites/Hud/Pierdevidas_", 4);
         gatosRecuperarSprites = cargarSpritesHUD("/Graficos/Sprites/Hud/Recuperavida_", 4);
-
-        gatosIdleAnim = new Animacion(gatosIdleSprites, 25, true);
-        gatosPerderAnim = new Animacion(gatosPerderSprites, 10, false);
-        gatosRecuperarAnim = new Animacion(gatosRecuperarSprites, 10, false);
+        gatosIdleAnim = new Animacion(gatosIdleSprites, 30, true);
+        gatosPerderAnim = new Animacion(gatosPerderSprites, 15, false);
+        gatosRecuperarAnim = new Animacion(gatosRecuperarSprites, 16, false);
     }
 
+    //CARGAR LAS ANIMACIONES DEL HUD
     private BufferedImage[] cargarSpritesHUD(String basePath, int cantidad) throws IOException {
         BufferedImage[] result = new BufferedImage[cantidad];
         for (int i = 0; i < cantidad; i++) {
@@ -247,19 +224,13 @@ public void reiniciar() {
         return result;
     }
 
-    // ============================================================
-    // 🟣 10. LÓGICA PRINCIPAL (ACTUALIZACIÓN)
-    // ============================================================
-    /**
-     * Actualiza la lógica del jugador
-     */
+    // LÓGICA PRINCIPAL DEL JUGADOR (ACTUALIZACIÓN)
     public void actualizar(boolean izquierda, boolean derecha, boolean arriba, boolean abajo, boolean atacar, boolean saltar, int limiteEscenario) {
-
-        // ---------------------------
+long ahoras = System.nanoTime();
         // ESTADO: DAÑADO
-        // ---------------------------
         if (estado == Estado.DAÑADO) {
             danoAnim.actualizar();
+            
 
             // Aplica gravedad y retroceso
             velocidadY += GRAVEDAD;
@@ -284,17 +255,16 @@ public void reiniciar() {
             }
             return;
         }
-        // ---------------------------
+
         // REGISTRO DE ATAQUES VERTICALES
-        // ---------------------------
         atacarArriba = arriba && atacar;
         atacarAbajo = abajo && atacar;
 
-        // ---------------------------
         // SALTO Y ATERRIZAJE
-        // ---------------------------
         if (estado == Estado.SALTANDO) {
+
             saltoAnim.actualizar();
+
             if (velocidadY > 0 && enSuelo) {
                 estado = Estado.ATERRIZANDO;
                 saltoAnim.reiniciar();
@@ -306,40 +276,50 @@ public void reiniciar() {
             }
         }
 
-        // ---------------------------
         // ATAQUE NUEVO
-        // ---------------------------
         if (atacar && !estaAtacando) {
+            if(puedeAtacar &&ahoras-tiempoUltimoAtaque>=COOLDOWN_ATAQUE){
             if (arriba) {
                 estaAtacando = true;
+                 GestorAudio.reproducirEfecto("ataque");
                 ataqueActualAnim = ataqueArribaAnim;
+
             } else if (abajo && !enSuelo) {
                 estaAtacando = true;
+                 GestorAudio.reproducirEfecto("ataque");
                 ataqueActualAnim = ataqueAbajoAnim;
+
             } else {
                 estaAtacando = true;
+                 GestorAudio.reproducirEfecto("ataque");
                 ataqueActualAnim = ataqueNormalAnim;
-            }
-            ataqueActualAnim.reiniciar();
-        }
 
-        // ---------------------------
+            }
+            tiempoUltimoAtaque = ahora;
+        puedeAtacar = false;
+            ataqueActualAnim.reiniciar();
+          
+    }
+        }
+          if (!puedeAtacar && ahoras - tiempoUltimoAtaque >= COOLDOWN_ATAQUE) {
+        puedeAtacar = true;
+        }
         // MOVIMIENTO HORIZONTAL
-        // ---------------------------
         velocidadX = 0;
         if (izquierda) {
             velocidadX = -VELOCIDAD_MOVIMIENTO;
             mirandoDerecha = false;
+
         } else if (derecha) {
             velocidadX = VELOCIDAD_MOVIMIENTO;
+
             mirandoDerecha = true;
         }
         x += velocidadX;
         x = Math.max(0, Math.min(x, limiteEscenario - ANCHO));
+        int limite = PanelJuego.ANCHO; // 1365
 
-        // ---------------------------
         // SALTO
-        // ---------------------------
         if (saltar && enSuelo) {
             velocidadY = FUERZA_SALTO;
             enSuelo = false;
@@ -347,9 +327,7 @@ public void reiniciar() {
             saltoAnim.reiniciar();
         }
 
-        // ---------------------------
         // GRAVEDAD
-        // ---------------------------
         velocidadY += GRAVEDAD;
         y += velocidadY;
         if (y >= SUELO_Y) {
@@ -361,28 +339,27 @@ public void reiniciar() {
             }
         }
 
-        // ---------------------------
         // AJUSTE ESTADO IDLE/CAMINANDO
-        // ---------------------------
         if (!estaAtacando && estado != Estado.SALTANDO && estado != Estado.ATERRIZANDO) {
             estado = IDLEorWalk(izquierda, derecha);
         }
 
-        // ---------------------------
         // ANIMACIONES POR ESTADO
-        // ---------------------------
         switch (estado) {
             case IDLE ->
                 idleAnim.actualizar();
             case CAMINANDO_DERECHA, CAMINANDO_IZQUIERDA ->
                 caminarAnim.actualizar();
+
             case SALTANDO ->
                 saltoAnim.actualizar();
-        }
-
-        // ---------------------------
-        // ANIMACIÓN DE ATAQUE
-        // ---------------------------
+            case RENACIENDO -> {
+                renacerAnim.actualizar();
+                if (renacerAnim.estaTerminada()) {
+                    estado = Estado.IDLE;
+                }
+            }
+        } // ANIMACIÓN DE ATAQUE
         if (estaAtacando && ataqueActualAnim != null) {
             ataqueActualAnim.actualizar();
             if (ataqueActualAnim.estaTerminada()) {
@@ -392,10 +369,9 @@ public void reiniciar() {
             }
         }
 
-        // ---------------------------
-        // RETROCESO
-        // ---------------------------
-        if (retrocesoX != 0) {
+        // RETROCESO TRAS DAÑO
+        if (retrocesoX
+                != 0) {
             x += retrocesoX;
             retrocesoX += (retrocesoX > 0) ? -5 : 5;
             if (Math.abs(retrocesoX) < 5) {
@@ -403,9 +379,7 @@ public void reiniciar() {
             }
         }
 
-        // ---------------------------
         // INVULNERABILIDAD
-        // ---------------------------
         if (invulnerable && estado != Estado.DAÑADO) {
             timerInvulnerable--;
             if (timerInvulnerable <= 0) {
@@ -415,13 +389,14 @@ public void reiniciar() {
             }
         }
 
-        //Animaciones del HUD
+        //ANIMACIONES DEL HUD
         if (animandoPerderVida) {
             gatosPerderAnim.actualizar();
             if (gatosPerderAnim.estaTerminada()) {
                 animandoPerderVida = false;
                 if (vidas > 0) {
-                    vidas--;  // REDUCE VIDA AQUÍ AL TERMINAR ANIMACIÓN
+                    vidas = vidas;  // REDUCE VIDA AQUÍ AL TERMINAR ANIMACIÓN
+                    System.out.println("Vidas restantes: " + vidas);
                 }
             }
         }
@@ -438,13 +413,26 @@ public void reiniciar() {
 
         gatosIdleAnim.actualizar();
 
+        //MUERTE
         if (vidas <= 0 && estado != Estado.MUERTO) {
             estado = Estado.MUERTO;
             muerteAnim.actualizar();
         }
 
+        estaCaminando = (velocidadX != 0) && enSuelo && !estaAtacando;
+
+        if (estaCaminando) {
+            long ahora = System.currentTimeMillis();
+            if (ahora - ultimoPasoTiempo > intervaloPaso) {
+                GestorAudio.paso.reproducir(); // Sonido de un paso
+                ultimoPasoTiempo = ahora;
+            }
+        } else {
+            GestorAudio.paso.parar(); // Detener si no está caminando
+        }
     }
 
+//ESTADOS DE MOVIMIENTO
     private Estado IDLEorWalk(boolean izquierda, boolean derecha) {
         if (izquierda) {
             return Estado.CAMINANDO_IZQUIERDA;
@@ -455,15 +443,14 @@ public void reiniciar() {
         return Estado.IDLE;
     }
 
-    // ============================================================
-    // 🟣 11. RECIBIR DAÑO
-    // ============================================================
+    // RECIBIR DAÑO
     public void recibirDaño(int cantidad, int direccionEmpuje) {
-        if (invulnerable || estado == Estado.DAÑADO) {
+        if (invulnerable || estado == Estado.DAÑADO || estado == estado.MUERTO) {
             return;
         }
-
-        perderVida(); // Asegúrate de llamar esto para descontar la vida y verificar muerte
+        GestorAudio.reproducirEfecto("daño");
+        this.cantidad = cantidad;
+        perderVida();
 
         estado = Estado.DAÑADO;
         danoAnim.reiniciar();
@@ -473,9 +460,19 @@ public void reiniciar() {
         retrocesoX = direccionEmpuje;
     }
 
-  
+    //PERDER VIDAS
+    public void perderVida() {
+        if (vidas > 1) {
+            vidas = vidas - cantidad;
+            animandoPerderVida = true;
+            gatosPerderAnim.reiniciar();
+        } else {
+            vidas = 0;
+            estado = Estado.MUERTO;
+        }
+    }
 
-    //GANAS PARA FASES LUNARES
+    //GANAS FASES LUNARES
     public void ganarFaseLunar() {
         fasesLunares++;
         if (fasesLunares > FASES_LUNARES_MAX) {
@@ -484,8 +481,10 @@ public void reiniciar() {
         System.out.println("Fase Lunar actual: " + fasesLunares);
     }
 
+    //CURARSE
     public boolean Curarse() {
         if (fasesLunares >= 3 && vidas < VIDA_MAXIMA) {
+             GestorAudio.reproducirEfecto("curarse");
             fasesLunares = Math.max(1, fasesLunares - 2);  // Nunca menor a 1
             ganarVida();
             System.out.println("Fases lunares tras curar: " + fasesLunares);
@@ -499,13 +498,19 @@ public void reiniciar() {
         }
     }
 
-    public boolean animacionMuerteTerminada() {
-        return muerteAnim.estaTerminada();
+    //ANIMACION GANAR VIDA
+    public void ganarVida() {
+        if (vidas < VIDA_MAXIMA && !animandoRecuperarVida) {
+            animandoRecuperarVida = true;
+            gatosRecuperarAnim.reiniciar();
+        }
     }
 
     public void comenzarCuracion() {
         if (!cargandoCuracion && fasesLunares >= 3 && vidas < VIDA_MAXIMA && estado == Estado.IDLE) {
             cargandoCuracion = true;
+            Teclado.bloquear();
+            Mouse.resetear();
             curacionAnim.reiniciar();
         }
     }
@@ -514,12 +519,16 @@ public void reiniciar() {
         if (cargandoCuracion) {
             cargandoCuracion = false;
             curacionAnim.reiniciar();
+            Teclado.bloquear();
+            Mouse.resetear();
         }
     }
 
     public void actualizarCuracion() {
         if (cargandoCuracion) {
             curacionAnim.actualizar();
+            Teclado.bloquear();
+            Mouse.resetear();
             if (curacionAnim.estaTerminada()) {
                 Curarse(); // ahora sí cura
                 cargandoCuracion = false;
@@ -527,43 +536,30 @@ public void reiniciar() {
         }
     }
 
-    public boolean estaCargandoCuracion() {
-        return cargandoCuracion;
-    }
-
+    //RENACER
     public void renacer() {
-        if (muerteAnim.estaTerminada()) {
-            estado = estado.RENACIENDO;
-            renacerAnim.actualizar();
+        estado = Estado.RENACIENDO;
+        if (renacerAnim != null) {
+            renacerAnim.reiniciar();
+            System.out.println("Jugador renaciendo");
         }
-        // Aquí puedes reiniciar otras animaciones o estados si quieres
-
     }
 
-    // ============================================================
-    // 🟣 12. COLISIONES Y HITBOX
-    // ============================================================
+    // COLISIONES Y HITBOX
     public Rectangle getRect() {
         return new Rectangle(x + OFFSET_HITBOX_X, y + OFFSET_HITBOX_Y, HITBOX_ANCHO, HITBOX_ALTO);
     }
-//Repeler hitboxes
 
     public void moverX(int dx) {
         x += dx;
     }
 
-    // ============================================================
-    // 🟣 13. ATAQUES HITBOX
-    // ============================================================
+    // ATAQUES HITBOX
     public void generarHitboxAtaque(List<AtaqueHitbox> listaHitboxes) {
         if (estaAtacando && ataqueActualAnim != null) {
-
             int frameImpacto = getFrameImpactoParaAnimacion(ataqueActualAnim);
-
             if (ataqueActualAnim.getFrameActualIndex() == frameImpacto) {
-
                 Rectangle hitbox = null;
-
                 if (ataqueActualAnim == ataqueNormalAnim) {
                     int offsetX = mirandoDerecha ? ANCHO - 40 : -115;
                     hitbox = new Rectangle(x + offsetX, y + 10, 150, 120);
@@ -576,7 +572,6 @@ public void reiniciar() {
                     int offsetY = ALTO;
                     hitbox = new Rectangle(x + offsetX, y + offsetY, 100, 120);
                 }
-
                 if (hitbox != null) {
                     listaHitboxes.add(new AtaqueHitbox(hitbox, 10));
                 }
@@ -594,12 +589,10 @@ public void reiniciar() {
         if (anim == ataqueAbajoAnim) {
             return 1;
         }
-        return 3; // valor por defecto
+        return 3;
     }
 
-    // ============================================================
-    // 🟣 14. DIBUJAR
-    // ============================================================
+    // DIBUJAR TODO DEL JUGADOR
     public void dibujar(Graphics g, int camaraX) {
         Graphics2D g2 = (Graphics2D) g;
         BufferedImage frameBase = null;
@@ -608,9 +601,19 @@ public void reiniciar() {
         int offsetDibujoX = 0;
         int offsetDibujoY = 0;
 
-        // ---------------------------
-        // SELECCIÓN DEL FRAME
-        // ---------------------------
+        // Selector de frames
+        if (estado == estado.RENACIENDO) {
+            BufferedImage frameRenacer = renacerAnim.getFrameActual();
+            int drawX = x - camaraX + curacionOffsetX;
+            int drawY = y + curacionOffsetY;
+            if (!mirandoDerecha) {
+                drawX += ANCHO;
+                g2.drawImage(frameRenacer, drawX, drawY, -ANCHO, ALTO, null);
+            } else {
+                g2.drawImage(frameRenacer, drawX, drawY, ANCHO, ALTO, null);
+            }
+            return;
+        }
         if (cargandoCuracion) {
             BufferedImage frameCuracion = curacionAnim.getFrameActual();
             int drawX = x - camaraX + curacionOffsetX;
@@ -619,9 +622,9 @@ public void reiniciar() {
 
             if (!mirandoDerecha) {
                 drawX += ANCHO;
-                g2.drawImage(frameCuracion, drawX, drawY, -ANCHO, ALTO, null);
+                g2.drawImage(frameCuracion, drawX, drawY + 5, -ANCHO, ALTO, null);
             } else {
-                g2.drawImage(frameCuracion, drawX, drawY, ANCHO, ALTO, null);
+                g2.drawImage(frameCuracion, drawX, drawY + 5, ANCHO, ALTO, null);
             }
             return;
         }
@@ -632,7 +635,6 @@ public void reiniciar() {
             frameBase = ataqueActualAnim.getFrameActual();
             anchoDibujo = (int) (frameBase.getWidth() * ESCALA_ATAQUE);
             altoDibujo = (int) (frameBase.getHeight() * ESCALA_ATAQUE);
-
             if (ataqueActualAnim == ataqueAbajoAnim) {
                 offsetDibujoY = +5;
             } else if (ataqueActualAnim == ataqueArribaAnim) {
@@ -658,52 +660,41 @@ public void reiniciar() {
             };
         }
 
-        // ---------------------------
-        // DIBUJO FINAL
-        // ---------------------------
         if (frameBase != null) {
-            // Control de transparencia si invulnerable
+            //Control de transparencia
             if (invulnerable) {
-                // Hacemos parpadeo
                 if ((blinkTimer / 5) % 2 == 0) {
                     g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3f)); // más transparente
                 } else {
                     g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f)); // normal
                 }
             }
-
             int drawX = x - camaraX + offsetDibujoX;
             int drawY = y + offsetDibujoY;
-
             if (!mirandoDerecha) {
                 drawX += anchoDibujo;
                 g2.drawImage(frameBase, drawX, drawY, -anchoDibujo, altoDibujo, null);
             } else {
                 g2.drawImage(frameBase, drawX, drawY, anchoDibujo, altoDibujo, null);
             }
-
             // Restaurar opacidad normal
             if (invulnerable) {
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
             }
         }
-       
-        
-
+        //dibujar el HUD
         dibujarHUD(g2);
-    }
+    }//FIN DIBUJAR JUGADOR
 
     //Dibujar HUD
     private void dibujarHUD(Graphics2D g2) {
-        // DIBUJAR FASE LUNAR
+        // Fase Lunar
         BufferedImage lunaSprite = fasesLunaresSprites[Math.max(0, Math.min(fasesLunares - 1, 4))];
         g2.drawImage(lunaSprite, 0, 0, 180, 180, null);
-
-        // DIBUJAR VIDAS / GATOS
+        // Dibujar vidas
         for (int i = 0; i < vidas; i++) {
             int xOffset = 140 + i * 75;
             BufferedImage frame;
-
             if (animandoPerderVida && i < vidas) {
                 frame = gatosPerderAnim.getFrameActual();
             } else if (animandoRecuperarVida && i < vidas) {
@@ -711,16 +702,17 @@ public void reiniciar() {
             } else {
                 frame = gatosIdleAnim.getFrameActual();
             }
-            //Gatos
             g2.drawImage(frame, xOffset, 20, 90, 90, null);
         }
-    }
+    }//FIN DIGUJAR HUD
 
-    // ============================================================
-    // 🟣 15. GETTERS
-    // ============================================================
+    //GETTERS
     public int getX() {
         return x;
+    }
+
+    public void setX(int x) {
+        this.x = x;
     }
 
     public int getY() {
@@ -755,28 +747,28 @@ public void reiniciar() {
         return fasesLunares;
     }
 
-    public void perderVida() {
-        if (vidas > 1) {
-            vidas--;
-            animandoPerderVida = true;
-            gatosPerderAnim.reiniciar();
-        } else {
-            vidas = 0;
-            estado = Estado.MUERTO;
-          
-            // Aquí deshabilitas input en tu controlador o en PanelJuego
-        }
+    public boolean animacionMuerteTerminada() {
+        return muerteAnim.estaTerminada();
+    }
+
+    public boolean estaCargandoCuracion() {
+        return cargandoCuracion;
     }
 
     public boolean estaMuerto() {
+        if (estado == estado.MUERTO) {
+            invulnerable = true;
+        }
         return estado == Estado.MUERTO;
     }
 
-    public void ganarVida() {
-        if (vidas < VIDA_MAXIMA && !animandoRecuperarVida) {
-            animandoRecuperarVida = true;
-            gatosRecuperarAnim.reiniciar();
+    public void limitarMovimiento(int xMin, int xMax) {
+        if (x < xMin) {
+            x = xMin;
+        }
+        if (x + ANCHO > xMax) {
+            x = xMax - ANCHO;
         }
     }
 
-}
+}//FIN DE CLASE JUGADOR

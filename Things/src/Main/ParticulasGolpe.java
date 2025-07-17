@@ -57,7 +57,7 @@ public class ParticulasGolpe {
     }
 
     public void dibujar(Graphics g, int camaraX) {
-    if (viva && frameActual < FRAMES_COMPARTIDOS.length) {
+    if (viva && frameActual < FRAMES_COMPARTIDOS.length ) {
         g.drawImage(FRAMES_COMPARTIDOS[frameActual], x - camaraX, y, PARTICULA_ANCHO, PARTICULA_ALTO, null);
     }
 }

@@ -45,11 +45,11 @@ private int retrocesoX = 0;
 private boolean estaMuriendo = false;
 
     private boolean mirandoDerecha = true;
-    private final int RADIO_DETECCION = 500;
-    private final int VELOCIDAD = 4;
+    private final int RADIO_DETECCION = 300;
+    private final int VELOCIDAD = 5;
     private int velocidadX = 0;
 
-    private int vida = 3;
+    private int vida = 4;
     private boolean puedeAtacar = true;
     private int cooldownAtaque = 60;
     private int temporizadorAtaque = 0;
@@ -63,9 +63,9 @@ private boolean estaMuriendo = false;
     private void cargarAnimaciones() {
         try {
             animIdle = new Animacion(cargarSprites("idle", 2), 200, true);
-            animGenerar = new Animacion(cargarSprites("generation", 8), 16, false);
-            animCaminar = new Animacion(cargarSprites("avanzar", 6), 24, true);
-            animacionMuerte = new Animacion(cargarSprites("muerte", 12), 10, false);  // Usa tus propios nombres y cantidad de frames
+            animGenerar = new Animacion(cargarSprites("generation", 6), 9, false);
+            animCaminar = new Animacion(cargarSprites("avanzar", 5), 24, true);
+            animacionMuerte = new Animacion(cargarSprites("muerte", 9), 10, false);  // Usa tus propios nombres y cantidad de frames
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -87,10 +87,10 @@ if (retrocesoX != 0) {
     x += retrocesoX;
 
     if (retrocesoX > 0) {
-        retrocesoX -= 5;
+        retrocesoX -= 12;
         if (retrocesoX < 0) retrocesoX = 0;
     } else {
-        retrocesoX += 5;
+        retrocesoX += 12;
         if (retrocesoX > 0) retrocesoX = 0;
     }
 }

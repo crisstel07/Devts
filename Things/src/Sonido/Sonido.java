@@ -28,15 +28,11 @@ public class Sonido {
     }
 
     public void reproducir() {
-        if (clip != null) {
-            if (clip.isRunning()) {
-                clip.stop();
-            }
-            clip.setFramePosition(0);
-            clip.start();
-        }
+    if (clip != null) {
+        clip.setFramePosition(0); // Reinicia desde el principio
+        clip.start();
     }
-
+}
     public void loop() {
         if (clip != null) {
             clip.loop(Clip.LOOP_CONTINUOUSLY);
@@ -44,10 +40,10 @@ public class Sonido {
     }
 
     public void parar() {
-        if (clip != null && clip.isRunning()) {
-            clip.stop();
-        }
+    if (clip != null && clip.isRunning()) {
+        clip.stop();
     }
+}
 
     public boolean estaReproduciendose() {
         return clip != null && clip.isRunning();
