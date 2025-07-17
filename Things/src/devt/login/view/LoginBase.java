@@ -34,9 +34,12 @@ import devt.login.apiFlask.ApiClient;
 import devt.login.apiFlask.ApiClient.ApiResponse;
 
 // Importaciones de tus paneles personalizados
-import devt.login.components.AlphaOverlayPanel; // Asegúrate de que esta importación sea correcta
+import devt.login.components.AlphaOverlayPanel; 
 import org.jdesktop.animation.timing.*;
 import org.jdesktop.animation.timing.interpolation.PropertySetter;
+
+// Importar la clase de tu juego (ahora será un JPanel)
+import Main.VentanaJuego; 
 
 
 public class LoginBase extends javax.swing.JFrame {
@@ -61,8 +64,9 @@ public class LoginBase extends javax.swing.JFrame {
     private PanelProfileAndInventory panelProfileAndInventory; 
     private PanelCharacterCreation panelCharacterCreation; 
     private ViewSystem mainMenuPanel; // Instancia del panel del menú principal
+    private VentanaJuego gamePanel; // Nueva instancia para el panel del juego
 
-    private AlphaOverlayPanel overlayPanel; // Instancia de AlphaOverlayPanel
+    private AlphaOverlayPanel overlayPanel; 
 
     public LoginBase() {
         // Inicialización de ActionListeners (necesarios para PanelLoginAndRegister)
@@ -88,7 +92,7 @@ public class LoginBase extends javax.swing.JFrame {
         this.setSize(1365, 767);
         this.setLocationRelativeTo(null);
         this.setResizable(false);
-        this.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setTitle("Juego RPG - Login"); 
 
         // Creación y configuración del Fondo del panel.
@@ -105,8 +109,8 @@ public class LoginBase extends javax.swing.JFrame {
         fondo.add(loginAndRegister, "width 55%, pos 1al 0 n 100%");
 
         // --- Inicialización de overlayPanel, loading, verifyCode en POPUP_LAYER ---
-        overlayPanel = new AlphaOverlayPanel(); // Instancia de AlphaOverlayPanel
-        overlayPanel.setVisible(false); // Inicialmente invisible
+        overlayPanel = new AlphaOverlayPanel(); 
+        overlayPanel.setVisible(false); 
         this.getLayeredPane().add(overlayPanel, JLayeredPane.POPUP_LAYER);
         overlayPanel.setBounds(0, 0, this.getWidth(), this.getHeight());
 
@@ -137,6 +141,9 @@ public class LoginBase extends javax.swing.JFrame {
                 }
                 if (panelCharacterCreation != null) {
                     panelCharacterCreation.setBounds(0, 0, getWidth(), getHeight());
+                }
+                if (gamePanel != null) { // Asegurarse de que el panel del juego también se redimensione
+                    gamePanel.setBounds(0, 0, getWidth(), getHeight());
                 }
             }
         });
@@ -437,6 +444,9 @@ public class LoginBase extends javax.swing.JFrame {
         if (panelProfileAndInventory != null) {
             panelProfileAndInventory.setVisible(false);
         }
+        if (gamePanel != null) { // Asegurarse de ocultar el panel del juego si está visible
+            gamePanel.setVisible(false);
+        }
 
         if (mainMenuPanel == null) {
             mainMenuPanel = new ViewSystem(loggedInUserData, currentCharacterData);
@@ -446,19 +456,19 @@ public class LoginBase extends javax.swing.JFrame {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     // 1. Iniciar fundido a negro
-                    overlayPanel.setVisible(true); // Asegurarse de que el overlay sea visible
-                    Animator fadeToBlackAnimator = new Animator(500, new TimingTargetAdapter() { // 500ms para el fundido
+                    overlayPanel.setVisible(true); 
+                    Animator fadeToBlackAnimator = new Animator(500, new TimingTargetAdapter() { 
                         @Override
                         public void timingEvent(float fraction) {
-                            overlayPanel.setAlpha(fraction); // Aumentar alpha de 0.0 a 1.0
+                            overlayPanel.setAlpha(fraction); 
                         }
 
                         @Override
                         public void end() {
                             // Cuando el fundido a negro ha terminado
                             SwingUtilities.invokeLater(() -> {
-                                mainMenuPanel.setVisible(false); // Ocultar el menú principal
-                                LoginBase.this.setTitle("Cargando Juego..."); // Cambiar título durante la carga
+                                mainMenuPanel.setVisible(false); 
+                                LoginBase.this.setTitle("Cargando Juego..."); 
 
                                 // 2. Mostrar la SplashScreen
                                 SplashScreen splash = new SplashScreen();
@@ -466,10 +476,10 @@ public class LoginBase extends javax.swing.JFrame {
                                     // Este código se ejecuta cuando la SplashScreen ha terminado y se ha cerrado
                                     SwingUtilities.invokeLater(() -> {
                                         // 3. Iniciar fundido de negro a transparente
-                                        Animator fadeFromBlackAnimator = new Animator(500, new TimingTargetAdapter() { // 500ms para el fundido
+                                        Animator fadeFromBlackAnimator = new Animator(500, new TimingTargetAdapter() { 
                                             @Override
                                             public void timingEvent(float fraction) {
-                                                overlayPanel.setAlpha(1.0f - fraction); // Disminuir alpha de 1.0 a 0.0
+                                                overlayPanel.setAlpha(1.0f - fraction); 
                                             }
 
                                             @Override
@@ -477,10 +487,20 @@ public class LoginBase extends javax.swing.JFrame {
                                                 // Cuando el fundido de salida ha terminado
                                                 SwingUtilities.invokeLater(() -> {
                                                     overlayPanel.setVisible(false); // Ocultar el overlay
-                                                    // Aquí puedes mostrar tu ventana de juego (Juego.java)
-                                                    // new Juego().setVisible(true); // Descomenta y adapta si tienes tu clase Juego
-                                                    mainMenuPanel.setVisible(true); // Vuelve a mostrar el menú principal si no hay juego
-                                                    LoginBase.this.setTitle("VEILKALWER - Menú Principal"); // Restaura el título
+                                                    
+                                                    // *** AQUÍ ES DONDE SE INICIA VentanaJuego (ahora como JPanel) ***
+                                                    // LoginBase.this.dispose(); // YA NO SE CIERRA EL JFrame PRINCIPAL
+                                                    
+                                                    if (gamePanel == null) {
+                                                        gamePanel = new VentanaJuego();
+                                                        // Añadir el panel del juego al JLayeredPane en la capa DEFAULT
+                                                        LoginBase.this.getLayeredPane().add(gamePanel, JLayeredPane.DEFAULT_LAYER);
+                                                        gamePanel.setBounds(0, 0, LoginBase.this.getWidth(), LoginBase.this.getHeight());
+                                                    }
+                                                    gamePanel.setVisible(true); // Hacer visible el panel del juego
+                                                    gamePanel.startGame(); // Inicia la lógica interna del juego y pide enfoque
+                                                    
+                                                    LoginBase.this.setTitle(VentanaJuego.titulo); // Establecer el título del juego
                                                     LoginBase.this.revalidate();
                                                     LoginBase.this.repaint();
                                                 });
@@ -543,6 +563,9 @@ public class LoginBase extends javax.swing.JFrame {
 
         if (mainMenuPanel != null) {
             mainMenuPanel.setVisible(false);
+        }
+        if (gamePanel != null) { // Asegurarse de ocultar el panel del juego si está visible
+            gamePanel.setVisible(false);
         }
 
         if (panelProfileAndInventory == null) {
@@ -655,6 +678,9 @@ public class LoginBase extends javax.swing.JFrame {
         if (panelCharacterCreation != null) {
             panelCharacterCreation.setVisible(false);
         }
+        if (gamePanel != null) { // Asegurarse de ocultar el panel del juego si está visible
+            gamePanel.setVisible(false);
+        }
         loading.setVisible(false);
         verifyCode.setVisible(false);
         overlayPanel.setVisible(false);
@@ -676,12 +702,11 @@ public class LoginBase extends javax.swing.JFrame {
         loginAndRegister.clearFields();
         verifyCode.clearFields(); 
         
-        setTitle("VEILWALKER - Login");
+        setTitle("Juego RPG - Login");
         revalidate();
         repaint();    
         showMessage(Message.MessageType.INFO, "Sesión cerrada exitosamente.");
     }
-
 
     // EL initComponents()  PARA UN JFRAME
     @SuppressWarnings("unchecked")
@@ -699,11 +724,8 @@ public class LoginBase extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables
 
-         // Clase interna FondoPanel para el fondo de la ventana principal
-    // Ahora es un JPanel simple, no un JLayeredPane, para simplificar la gestión de capas.
-   
      // Clase interna FondoPanel para el fondo de la ventana principal
-     class FondoPanel extends JPanel {
+    class FondoPanel extends JPanel {
         private Image imagen;
 
         public FondoPanel() {
@@ -741,13 +763,6 @@ public class LoginBase extends javax.swing.JFrame {
                     javax.swing.UIManager.setLookAndFeel(info.getClassName());
                     break;
                 }
-                // Añadir soporte para AbsoluteLayout si no está ya en el proyecto
-                // Esto es crucial para que initComponents() funcione si fue generado con AbsoluteLayout
-                // y la librería no está explícitamente en el classpath.
-                // if ("AbsoluteLayout".equals(info.getName())) {
-                //     javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                //     break;
-                // }
             }
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(LoginBase.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
