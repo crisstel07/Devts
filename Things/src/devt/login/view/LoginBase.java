@@ -27,6 +27,9 @@ import java.awt.Graphics2D;
 import java.util.HashMap;
 import java.util.Map;
 import java.net.URL;
+// ¡NUEVO! Importaciones para el cierre de ventana y guardado
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 // Gson (para JSON)
 import com.google.gson.JsonObject;
@@ -42,13 +45,14 @@ import devt.login.components.AlphaOverlayPanel;
 import org.jdesktop.animation.timing.*;
 import org.jdesktop.animation.timing.interpolation.PropertySetter;
 
-// Importar la clase de tu juego (ahora será un JPanel)
+// Importar la clase de tu juego (ahora será un JLayeredPane)
 import Main.VentanaJuego;
 import Sonido.Musica;
 import devt.login.view.ViewSystem;
 
 
-public class LoginBase extends javax.swing.JFrame {
+// ¡MODIFICADO! LoginBase ahora implementa la interfaz GameNavigationCallback de VentanaJuego
+public class LoginBase extends javax.swing.JFrame implements VentanaJuego.GameNavigationCallback {
 
     private Musica musicaFondoLogin;
 
@@ -71,17 +75,23 @@ public class LoginBase extends javax.swing.JFrame {
     private JsonObject currentCharacterData;
     private PanelProfileAndInventory panelProfileAndInventory;
     private PanelCharacterCreation panelCharacterCreation;
-    private ViewSystem mainMenuPanel;
-    private VentanaJuego gamePanel;
+    private ViewSystem mainMenuPanel; // Este es tu PanelMenuPrincipal
+    private VentanaJuego gamePanel; // ¡MODIFICADO! Ahora es de tipo VentanaJuego
 
     private AlphaOverlayPanel overlayPanel;
 
     private PanelForgotPassword forgotPasswordPanel;
 
-    // Instancia única para mostrar mensajes (Esta línea estaba en tu código, la mantengo)
+    // Instancia única para mostrar mensajes
     private Message messagePanelInstance;
 
+    // ¡NUEVO! Instancia de ApiClient (asegurarse de que esté inicializada)
+    private final ApiClient apiClient;
+
     public LoginBase() {
+        // Inicializa ApiClient al inicio
+        apiClient = new ApiClient(); // ¡NUEVO! Inicialización de apiClient
+
         try {
             musicaFondoLogin = new Musica("/Sonido/music.wav");
             musicaFondoLogin.reproducirEnLoop();
@@ -113,18 +123,20 @@ public class LoginBase extends javax.swing.JFrame {
 
         loginAndRegister = new PanelLoginAndRegister(eventRegister, eventLogin, eventForgotPassword);
 
-        initComponents();
+        initComponents(); // Llama a initComponents para configurar el JFrame
 
         this.setSize(1365, 767);
         this.setLocationRelativeTo(null);
         this.setResizable(false);
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        // ¡MODIFICADO! Manejaremos el cierre de la ventana manualmente para guardar
+        this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE); 
         this.setTitle("VEILWALKER - Login");
 
         fondo = new FondoPanel();
         layout = new MigLayout("fill, insets 0");
         fondo.setLayout(layout);
 
+        // ¡MODIFICADO! Añadir fondo al JLayeredPane del JFrame
         this.getLayeredPane().add(fondo, JLayeredPane.DEFAULT_LAYER);
         fondo.setBounds(0, 0, this.getWidth(), this.getHeight());
 
@@ -161,6 +173,26 @@ public class LoginBase extends javax.swing.JFrame {
 
         init();
 
+        // ¡NUEVO! Manejar el cierre de la ventana para guardar datos
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent windowEvent) {
+                // Si el juego está activo, guardamos el progreso antes de salir
+                if (gamePanel != null && gamePanel.isVisible()) {
+                    System.out.println("Cerrando aplicación desde el juego. Guardando...");
+                    saveCurrentCharacterData(gamePanel.getPanelJuego().getCurrentCharacterData());
+                } else if (currentCharacterData != null) {
+                    // Si hay un personaje cargado pero no estamos en el juego (ej. en menú principal o perfil),
+                    // guardamos los datos del personaje que tenemos en memoria (que ya deberían estar actualizados
+                    // si se editaron en PanelProfileAndInventory y se presionó "Guardar Juego").
+                    System.out.println("Cerrando aplicación fuera del juego. Guardando datos del personaje...");
+                    saveCurrentCharacterData(currentCharacterData);
+                }
+                // Finalmente, cerramos la aplicación
+                System.exit(0);
+            }
+        });
+
         addComponentListener(new java.awt.event.ComponentAdapter() {
             public void componentResized(java.awt.event.ComponentEvent evt) {
                 fondo.setBounds(0, 0, getWidth(), getHeight());
@@ -180,6 +212,7 @@ public class LoginBase extends javax.swing.JFrame {
                 if (panelCharacterCreation != null) {
                     panelCharacterCreation.setBounds(0, 0, getWidth(), getHeight());
                 }
+                // ¡MODIFICADO! Asegurar que gamePanel también se redimensione
                 if (gamePanel != null) {
                     gamePanel.setBounds(0, 0, getWidth(), getHeight());
                 }
@@ -209,20 +242,17 @@ public class LoginBase extends javax.swing.JFrame {
             }
         });
 
-        forgotPasswordPanel.addEventCancel(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent ae) {
-                System.out.println("PanelForgotPassword: Botón CANCELAR presionado.");
-                forgotPasswordPanel.setVisible(false);
-                overlayPanel.setVisible(false);
-                fondo.setVisible(true);
-                loginAndRegister.setVisible(true);
-                cover.setVisible(true);
-                setTitle("VEILWALKER - Login");
-                revalidate();
-                repaint();
-                forgotPasswordPanel.showEmailInput();
-            }
+        forgotPasswordPanel.addEventCancel(e -> {           
+            System.out.println("PanelForgotPassword: Botón CANCELAR presionado.");
+            forgotPasswordPanel.setVisible(false);
+            overlayPanel.setVisible(false);
+            fondo.setVisible(true);
+            loginAndRegister.setVisible(true);
+            cover.setVisible(true);
+            setTitle("VEILWALKER - Login");
+            revalidate();
+            repaint();
+            forgotPasswordPanel.showEmailInput();
         });
 
         // TU CÓDIGO ORIGINAL DE ANIMACIÓN - NO MODIFICADO
@@ -303,7 +333,7 @@ public class LoginBase extends javax.swing.JFrame {
                     @Override
                     protected ApiClient.ApiResponse doInBackground() throws Exception {
                         System.out.println("SwingWorker (verifyCode): Llamando a ApiClient.verifyUser...");
-                        return ApiClient.verifyUser(email, inputCode);
+                        return apiClient.verifyUser(email, inputCode); // ¡MODIFICADO! Usar apiClient
                     }
 
                     @Override
@@ -353,7 +383,7 @@ public class LoginBase extends javax.swing.JFrame {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
                 System.out.println("SwingWorker (register): Llamando a ApiClient.registerUser...");
-                return ApiClient.registerUser(username, email, password);
+                return apiClient.registerUser(username, email, password); // ¡MODIFICADO! Usar apiClient
             }
 
             @Override
@@ -400,7 +430,7 @@ public class LoginBase extends javax.swing.JFrame {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
                 System.out.println("SwingWorker (login): Llamando a ApiClient.loginUser...");
-                return ApiClient.loginUser(email, password);
+                return apiClient.loginUser(email, password); // ¡MODIFICADO! Usar apiClient
             }
 
             @Override
@@ -452,7 +482,7 @@ public class LoginBase extends javax.swing.JFrame {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
                 System.out.println("SwingWorker (loadOrCreateCharacter): Llamando a ApiClient.getOrCreateCharacterProfile...");
-                return ApiClient.getOrCreateCharacterProfile(userId);
+                return apiClient.getOrCreateCharacterProfile(userId); // ¡MODIFICADO! Usar apiClient
             }
 
             @Override
@@ -531,6 +561,7 @@ public class LoginBase extends javax.swing.JFrame {
                     performLogout();
                 }
             });
+            // ¡MODIFICADO! Añadir a JLayeredPane
             this.getLayeredPane().add(panelCharacterCreation, JLayeredPane.DEFAULT_LAYER);
             panelCharacterCreation.setBounds(0, 0, getWidth(), getHeight());
         } else {
@@ -549,29 +580,26 @@ public class LoginBase extends javax.swing.JFrame {
         repaint();
     }
 
-    private void showMainMenu() {
-        fondo.setVisible(false);
-
-        if (panelCharacterCreation != null) {
-            panelCharacterCreation.setVisible(false);
-        }
-        if (panelProfileAndInventory != null) {
-            panelProfileAndInventory.setVisible(false);
-        }
-        if (gamePanel != null) {
-            gamePanel.setVisible(false);
-        }
+    // ¡MODIFICADO! showMainMenu ahora usa la lógica de ocultar todos los paneles
+    // y luego mostrar el menú principal. También es la implementación de la interfaz.
+    public void showMainMenu() {
+        // Ocultar todos los paneles posibles antes de mostrar el menú principal
+        fondo.setVisible(false); // Oculta el fondo del login/registro
+        if (panelCharacterCreation != null) { panelCharacterCreation.setVisible(false); }
+        if (panelProfileAndInventory != null) { panelProfileAndInventory.setVisible(false); }
+        if (gamePanel != null) { gamePanel.setVisible(false); } // ¡IMPORTANTE! Ocultar el juego
         overlayPanel.setVisible(false);
-        if (forgotPasswordPanel != null) {
-            forgotPasswordPanel.setVisible(false);
-        }
+        if (forgotPasswordPanel != null) { forgotPasswordPanel.setVisible(false); }
+        loading.setVisible(false); // Asegurarse de que el loading esté oculto
+        verifyCode.setVisible(false); // Asegurarse de que el verifyCode esté oculto
+
         if (mainMenuPanel == null) {
             mainMenuPanel = new devt.login.view.ViewSystem(loggedInUserData, currentCharacterData);
 
             mainMenuPanel.addPlayButtonListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    overlayPanel.setVisible(true);
+                    overlayPanel.setVisible(true); // Mostrar overlay para la transición
                     Animator fadeToBlackAnimator = new Animator(500, new TimingTargetAdapter() {
                         @Override
                         public void timingEvent(float fraction) {
@@ -598,16 +626,9 @@ public class LoginBase extends javax.swing.JFrame {
                                             public void end() {
                                                 SwingUtilities.invokeLater(() -> {
                                                     overlayPanel.setVisible(false);
-
-                                                    if (gamePanel == null) {
-                                                        gamePanel = new Main.VentanaJuego();
-                                                        LoginBase.this.getLayeredPane().add(gamePanel, JLayeredPane.DEFAULT_LAYER);
-                                                        gamePanel.setBounds(0, 0, LoginBase.this.getWidth(), LoginBase.this.getHeight());
-                                                    }
-                                                    gamePanel.setVisible(true);
-                                                    gamePanel.startGame();
+                                                    // ¡MODIFICADO! Llamar a showGameScreen con los datos del personaje
+                                                    LoginBase.this.showGameScreen(currentCharacterData);
                                                     showMessage(Message.MessageType.SUCCESS, "¡Juego iniciado!");
-
                                                     LoginBase.this.setTitle(Main.VentanaJuego.titulo);
                                                     LoginBase.this.revalidate();
                                                     LoginBase.this.repaint();
@@ -645,9 +666,11 @@ public class LoginBase extends javax.swing.JFrame {
             mainMenuPanel.addMouseListener(new java.awt.event.MouseAdapter() {
                 @Override
                 public void mouseClicked(java.awt.event.MouseEvent evt) {
+                    // Puedes dejar esto vacío si no necesitas una acción al hacer clic en el panel
                 }
             });
 
+            // ¡MODIFICADO! Añadir a JLayeredPane
             this.getLayeredPane().add(mainMenuPanel, JLayeredPane.DEFAULT_LAYER);
             mainMenuPanel.setBounds(0, 0, getWidth(), getHeight());
 
@@ -662,26 +685,25 @@ public class LoginBase extends javax.swing.JFrame {
         repaint();
     }
 
-    private void showProfileScreen() {
+    // ¡MODIFICADO! showProfileScreen ahora usa la lógica de ocultar todos los paneles
+    // y luego mostrar el perfil. También es la implementación de la interfaz.
+    public void showProfileScreen() {
+        // Ocultar todos los paneles posibles antes de mostrar el perfil
+        fondo.setVisible(false); // Oculta el fondo del login/registro
+        if (mainMenuPanel != null) { mainMenuPanel.setVisible(false); }
+        if (gamePanel != null) { gamePanel.setVisible(false); } // ¡IMPORTANTE! Ocultar el juego
+        if (panelCharacterCreation != null) { panelCharacterCreation.setVisible(false); }
+        overlayPanel.setVisible(false);
+        if (forgotPasswordPanel != null) { forgotPasswordPanel.setVisible(false); }
+        loading.setVisible(false); // Asegurarse de que el loading esté oculto
+        verifyCode.setVisible(false); // Asegurarse de que el verifyCode esté oculto
+
         if (loggedInUserData == null || !loggedInUserData.has("id") || loggedInUserData.get("id").isJsonNull() || currentCharacterData == null || !currentCharacterData.has("id") || currentCharacterData.get("id").isJsonNull()) {
             showMessage(Message.MessageType.ERROR, "Datos de usuario o personaje no disponibles para el perfil.");
             performLogout();
             return;
         }
 
-        if (mainMenuPanel != null) {
-            mainMenuPanel.setVisible(false);
-        }
-        if (gamePanel != null) {
-            gamePanel.setVisible(false);
-        }
-        if (panelCharacterCreation != null) {
-            panelCharacterCreation.setVisible(false);
-        }
-        overlayPanel.setVisible(false);
-        if (forgotPasswordPanel != null) {
-            forgotPasswordPanel.setVisible(false);
-        }
         if (panelProfileAndInventory == null) {
             panelProfileAndInventory = new devt.login.view.PanelProfileAndInventory(loggedInUserData);
 
@@ -699,14 +721,53 @@ public class LoginBase extends javax.swing.JFrame {
                 }
             });
 
+            // ¡MODIFICADO! Añadir a JLayeredPane
             this.getLayeredPane().add(panelProfileAndInventory, JLayeredPane.DEFAULT_LAYER);
             panelProfileAndInventory.setBounds(0, 0, getWidth(), getHeight());
         }
 
-        panelProfileAndInventory.loadData(this.currentCharacterData);
+        panelProfileAndInventory.loadData(this.currentCharacterData); // Carga los datos del personaje en el panel de perfil
+        panelProfileAndInventory.updateUserData(loggedInUserData); // Actualiza los datos del usuario en el perfil
 
         panelProfileAndInventory.setVisible(true);
         setTitle("VEILWALKER - Perfil e Inventario");
+        revalidate();
+        repaint();
+    }
+
+    // ¡NUEVO! Método para mostrar la pantalla del juego
+    // Este método es llamado por el botón "Jugar" en ViewSystem (MainMenu)
+    // y también internamente por LoginBase al reanudar el juego desde el splash screen.
+    public void showGameScreen(JsonObject characterData) {
+        this.currentCharacterData = characterData; // Asegurarse de que el personaje actual esté seteado
+        
+        // Detener y remover la instancia anterior de VentanaJuego si existe
+        if (gamePanel != null) {
+            gamePanel.stopGame(); // Detiene el juego anterior si existe
+            this.getLayeredPane().remove(gamePanel); // Remueve la instancia anterior
+            gamePanel = null; // Limpia la referencia
+        }
+
+        // Crear una nueva instancia de VentanaJuego, pasándole el callback y los datos del personaje
+        gamePanel = new VentanaJuego(this, characterData); // ¡MODIFICADO!
+        // Establece los límites para que ocupe todo el JLayeredPane
+        gamePanel.setBounds(0, 0, this.getWidth(), this.getHeight()); 
+        this.getLayeredPane().add(gamePanel, JLayeredPane.DEFAULT_LAYER); // Añade en la capa por defecto (inferior)
+        
+        // Ocultar todos los otros paneles
+        fondo.setVisible(false);
+        if (mainMenuPanel != null) { mainMenuPanel.setVisible(false); }
+        if (panelProfileAndInventory != null) { panelProfileAndInventory.setVisible(false); }
+        if (panelCharacterCreation != null) { panelCharacterCreation.setVisible(false); }
+        overlayPanel.setVisible(false);
+        if (forgotPasswordPanel != null) { forgotPasswordPanel.setVisible(false); }
+        loading.setVisible(false);
+        verifyCode.setVisible(false);
+
+        gamePanel.setVisible(true); // Hacer visible el panel del juego
+        gamePanel.startGame(); // Inicia el hilo del juego y pide foco
+        gamePanel.requestFocusInWindow(); // Asegura que VentanaJuego reciba el foco para la tecla ESC
+        setTitle(Main.VentanaJuego.titulo); // Actualiza el título de la ventana
         revalidate();
         repaint();
     }
@@ -734,7 +795,7 @@ public class LoginBase extends javax.swing.JFrame {
         repaint();
     }
 
-     private void requestPasswordResetCode() {
+    private void requestPasswordResetCode() {
         String email = forgotPasswordPanel.getEmail();
         System.out.println("requestPasswordResetCode: Intentando enviar código a " + email);
 
@@ -751,7 +812,7 @@ public class LoginBase extends javax.swing.JFrame {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
                 System.out.println("SwingWorker (requestPasswordResetCode): Llamando a ApiClient.requestPasswordResetCode...");
-                return ApiClient.requestPasswordResetCode(email);
+                return apiClient.requestPasswordResetCode(email);
             }
 
             @Override
@@ -809,7 +870,7 @@ public class LoginBase extends javax.swing.JFrame {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
                 System.out.println("SwingWorker (resetPasswordWithCode): Llamando a ApiClient.resetPasswordWithCode...");
-                return ApiClient.resetPasswordWithCode(email, code, newPassword);
+                return apiClient.resetPasswordWithCode(email, code, newPassword);
             }
 
             @Override
@@ -839,8 +900,9 @@ public class LoginBase extends javax.swing.JFrame {
             }
         }.execute();
     }
+
     private void showMessage(Message.MessageType messageType, String message) {
-    messagePanelInstance.showMessage(messageType, message);
+        messagePanelInstance.showMessage(messageType, message);
         
         TimingTarget target = new TimingTargetAdapter() {
             @Override
@@ -866,8 +928,7 @@ public class LoginBase extends javax.swing.JFrame {
                 getLayeredPane().revalidate();
                 getLayeredPane().repaint();
             }
-
-           
+            
             @Override
             public void end() {
                 if (messagePanelInstance.isShow()) {
@@ -909,57 +970,152 @@ public class LoginBase extends javax.swing.JFrame {
         animator.start();
     }
 
+    // ¡NUEVO! Setter para los datos del usuario logueado
+    public void setLoggedInUserData(JsonObject userData) {
+        this.loggedInUserData = userData;
+        // Pasa los datos del usuario a PanelProfileAndInventory
+        if (panelProfileAndInventory != null) {
+            // Asegúrate de que PanelProfileAndInventory tenga un método updateUserData
+            panelProfileAndInventory.updateUserData(loggedInUserData);
+        }
+    }
+
+    // ¡NUEVO! Getter para los datos del usuario logueado
+    public JsonObject getLoggedInUserData() {
+        return loggedInUserData;
+    }
+
+    // ¡NUEVO! Setter para los datos del personaje actual
+    public void setCurrentCharacterData(JsonObject characterData) {
+        this.currentCharacterData = characterData;
+        // Si el juego ya está visible, actualiza también sus datos
+        if (gamePanel != null && gamePanel.isVisible()) {
+            gamePanel.updateCharacterData(characterData);
+        }
+    }
+
+    // ¡NUEVO! Getter para los datos del personaje actual
+    public JsonObject getCurrentCharacterData() {
+        return currentCharacterData;
+    }
+
+    /**
+     * Método para guardar los datos del personaje actual en el servidor.
+     * Este método será llamado desde VentanaJuego (a través del callback)
+     * y desde el WindowListener al cerrar la aplicación.
+     */
+    public void saveCurrentCharacterData(JsonObject dataToSave) {
+        if (dataToSave == null || !dataToSave.has("id") || dataToSave.get("id").isJsonNull()) {
+            System.out.println("No hay datos de personaje válidos (ID faltante) para guardar.");
+            return;
+        }
+
+        int characterId = dataToSave.get("id").getAsInt();
+        System.out.println("Iniciando guardado de progreso para personaje ID: " + characterId);
+
+        new SwingWorker<ApiResponse, Void>() {
+            @Override
+            protected ApiResponse doInBackground() throws Exception {
+                // Llama al método de tu ApiClient para actualizar el perfil del personaje
+                return apiClient.updateCharacterProfile(characterId, dataToSave);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    ApiResponse response = get();
+                    if (response.isSuccess()) {
+                        System.out.println("Progreso del personaje guardado exitosamente.");
+                    } else {
+                        System.err.println("Error al guardar el progreso del personaje: " + response.getMessage());
+                    }
+                } catch (Exception e) {
+                    System.err.println("Excepción al guardar el progreso: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }.execute();
+    }
+
+    // Implementación de la interfaz GameNavigationCallback
+    @Override
+    public void goToMainMenu() {
+        // 1. Guardar el progreso del juego antes de ir al menú principal
+        if (gamePanel != null && gamePanel.getPanelJuego() != null) {
+            saveCurrentCharacterData(gamePanel.getPanelJuego().getCurrentCharacterData());
+        }
+        // 2. Detener el juego
+        if (gamePanel != null) {
+            gamePanel.stopGame();
+        }
+        // 3. Mostrar el menú principal
+        showMainMenu();
+    }
+
+    @Override
+    public void goToProfile() {
+        // 1. Guardar el progreso del juego antes de ir al perfil
+        if (gamePanel != null && gamePanel.getPanelJuego() != null) {
+            saveCurrentCharacterData(gamePanel.getPanelJuego().getCurrentCharacterData());
+        }
+        // 2. Detener el juego
+        if (gamePanel != null) {
+            gamePanel.stopGame();
+        }
+        // 3. Mostrar la pantalla de perfil
+        showProfileScreen();
+    }
+
     private void performLogout() {
         loggedInUserData = null;
         currentCharacterData = null;
         currentRegisteredUserId = null;
         
-        if (mainMenuPanel != null) {
-            mainMenuPanel.setVisible(false);
-        }
-        if (panelProfileAndInventory != null) {
-            panelProfileAndInventory.setVisible(false);
-        }
-        if (panelCharacterCreation != null) {
-            panelCharacterCreation.setVisible(false);
-        }
-        if (gamePanel != null) {
-            gamePanel.setVisible(false);
-        }
-          // Ocultar paneles superpuestos
+        // Ocultar todos los paneles de contenido
+        if (mainMenuPanel != null) { mainMenuPanel.setVisible(false); }
+        if (panelProfileAndInventory != null) { panelProfileAndInventory.setVisible(false); }
+        if (panelCharacterCreation != null) { panelCharacterCreation.setVisible(false); }
+        if (gamePanel != null) { gamePanel.setVisible(false); } // ¡IMPORTANTE! Ocultar el juego
+        
+        // Ocultar paneles superpuestos
         loading.setVisible(false);
         verifyCode.setVisible(false);
-        forgotPasswordPanel.setVisible(false); // ¡NUEVO! Ocultar forgot password panel
+        forgotPasswordPanel.setVisible(false);
         overlayPanel.setVisible(false);
 
-         if (messagePanelInstance != null && messagePanelInstance.isVisible() && messagePanelInstance.getParent() == getLayeredPane()) {
+        // Remover el panel de mensajes si está visible
+        if (messagePanelInstance != null && messagePanelInstance.isVisible() && messagePanelInstance.getParent() == getLayeredPane()) {
             getLayeredPane().remove(messagePanelInstance);
         }
-         
-        getLayeredPane().removeAll(); // Esta línea limpia todos los componentes del layered pane
         
-        getLayeredPane().add(fondo, JLayeredPane.DEFAULT_LAYER);
+        // Asegurarse de que el fondo y los paneles de superposición estén en el layered pane y visibles/ocultos según el estado.
+        // No se usa removeAll() para evitar tener que re-añadir todo.
+        if (fondo.getParent() == null) {
+             getLayeredPane().add(fondo, JLayeredPane.DEFAULT_LAYER);
+        }
         fondo.setBounds(0, 0, getWidth(), getHeight());
         fondo.setVisible(true);
 
-        getLayeredPane().add(loading, JLayeredPane.POPUP_LAYER);
-        getLayeredPane().add(verifyCode, JLayeredPane.POPUP_LAYER);
-        getLayeredPane().add(overlayPanel, JLayeredPane.POPUP_LAYER);
-        
+        if (loading.getParent() == null) { getLayeredPane().add(loading, JLayeredPane.POPUP_LAYER); }
+        if (verifyCode.getParent() == null) { getLayeredPane().add(verifyCode, JLayeredPane.POPUP_LAYER); }
+        if (overlayPanel.getParent() == null) { getLayeredPane().add(overlayPanel, JLayeredPane.POPUP_LAYER); }
+        if (forgotPasswordPanel.getParent() == null) { getLayeredPane().add(forgotPasswordPanel, JLayeredPane.POPUP_LAYER); }
+
         isLogin = true;
         loginAndRegister.showLogin(true);
         cover.login(isLogin); // Asegurar que el cover muestra el texto correcto para Login
         
         loginAndRegister.clearFields();
         verifyCode.clearFields();
-        forgotPasswordPanel.clearFields(); // ¡NUEVO! Limpiar campos de forgot password panel
-        forgotPasswordPanel.showEmailInput(); // ¡NUEVO! Resetear forgot password panel a la vista de email
+        forgotPasswordPanel.clearFields();
+        forgotPasswordPanel.showEmailInput(); // Resetear forgot password panel a la vista de email
 
-        setTitle("JVEILWALKER");
+        setTitle("VEILWALKER - Login"); // ¡CORREGIDO! Título de la ventana principal
         revalidate();
-        repaint();    
+        repaint();
         showMessage(Message.MessageType.INFO, "Sesión cerrada exitosamente.");
     }
+
     // EL initComponents()  PARA UN JFRAME
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -975,7 +1131,7 @@ public class LoginBase extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables
 
-    // Clase interna FondoPanel para el fondo de la ventana principal (INTACTA)
+   // Clase interna FondoPanel para el fondo de la ventana principal (INTACTA)
     class FondoPanel extends JPanel {
         private Image imagen;
 
@@ -1008,6 +1164,7 @@ public class LoginBase extends javax.swing.JFrame {
     }
 
     public static void main(String[] args) {
+        // Asegúrate de que el LookAndFeel se establezca antes de crear la ventana
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
@@ -1020,7 +1177,8 @@ public class LoginBase extends javax.swing.JFrame {
         }
 
         SwingUtilities.invokeLater(() -> {
-            new LoginBase().setVisible(true);
+            LoginBase frame = new LoginBase();
+            frame.setVisible(true);
         });
     }
 }
