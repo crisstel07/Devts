@@ -1,9 +1,7 @@
 package Sonido;
 
 import javax.sound.sampled.*;
-import java.io.BufferedInputStream; // Necesario para BufferedInputStream
 import java.io.IOException;
-import java.io.InputStream; // Necesario para InputStream
 import java.net.URL;
 
 public class Sonido {
@@ -14,16 +12,8 @@ public class Sonido {
 
     public Sonido(String ruta) {
         try {
-            // Usar getClass().getResourceAsStream para recursos dentro del JAR
-            InputStream audioSrc = getClass().getResourceAsStream(ruta);
-            if (audioSrc == null) {
-                System.err.println("Error: Archivo de sonido no encontrado en la ruta: " + ruta);
-                return; // Salir si el archivo no se encuentra
-            }
-            // BufferedInputStream es crucial para que AudioSystem pueda leer correctamente
-            InputStream bufferedIn = new BufferedInputStream(audioSrc);
-            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(bufferedIn);
-            
+            URL url = getClass().getResource(ruta);
+            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(url);
             clip = AudioSystem.getClip();
             clip.open(audioInputStream);
 
@@ -33,35 +23,29 @@ public class Sonido {
             }
 
         } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
-            System.err.println("Error al cargar el sonido " + ruta + ": " + e.getMessage());
             e.printStackTrace();
-            clip = null; // Asegurarse de que el clip sea null si hay un error
         }
     }
 
     public void reproducir() {
-        if (clip != null) {
-            clip.setFramePosition(0); // Reinicia desde el principio
-            clip.start();
-        }
+    if (clip != null) {
+        clip.setFramePosition(0); // Reinicia desde el principio
+        clip.start();
     }
-
-    // MODIFICADO: Renombrado de 'loop()' a 'reproducirEnLoop()' para consistencia
-    public void reproducirEnLoop() {
+}
+    public void loop() {
         if (clip != null) {
-            clip.setFramePosition(0); // Reinicia desde el principio
             clip.loop(Clip.LOOP_CONTINUOUSLY);
         }
     }
 
     public void parar() {
-        if (clip != null && clip.isRunning()) {
-            clip.stop();
-        }
+    if (clip != null && clip.isRunning()) {
+        clip.stop();
     }
+}
 
-    // MODIFICADO: Renombrado de 'estaReproduciendose()' a 'estaReproduciendo()'
-    public boolean estaReproduciendo() {
+    public boolean estaReproduciendose() {
         return clip != null && clip.isRunning();
     }
 
@@ -75,11 +59,7 @@ public class Sonido {
      */
     public void setVolumen(float decibelios) {
         if (controlVolumen != null) {
-            // Asegurarse de que el valor esté dentro del rango permitido por el control
-            float min = controlVolumen.getMinimum();
-            float max = controlVolumen.getMaximum();
-            float clampedDb = Math.max(min, Math.min(max, decibelios));
-            controlVolumen.setValue(clampedDb);
+            controlVolumen.setValue(decibelios);
         }
     }
 

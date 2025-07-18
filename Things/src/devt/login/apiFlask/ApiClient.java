@@ -2,7 +2,7 @@ package devt.login.apiFlask;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.JsonParser; // Necesario para parsear la respuesta
 import com.google.gson.JsonElement;
 import com.google.gson.JsonArray;
 
@@ -11,7 +11,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.StandardCharsets; // Importar StandardCharsets
 import java.util.Map;
 
 public class ApiClient {
@@ -85,8 +85,7 @@ public class ApiClient {
      * @param jsonInput El JsonObject a enviar en el cuerpo de la solicitud (puede ser null para GET).
      * @return ApiResponse con el resultado de la operación.
      */
-    // ¡MODIFICADO! Se quitó 'static'
-    private ApiResponse sendRequest(String endpoint, String method, JsonObject jsonInput) {
+    private static ApiResponse sendRequest(String endpoint, String method, JsonObject jsonInput) {
         HttpURLConnection conn = null;
         try {
             URL url = new URL(API_BASE_URL + endpoint);
@@ -94,6 +93,7 @@ public class ApiClient {
             conn.setRequestMethod(method);
             conn.setRequestProperty("Content-Type", "application/json; utf-8");
             conn.setRequestProperty("Accept", "application/json");
+            conn.setDoOutput(true); // Permitir salida para POST/PUT
             
             // Deshabilitar doOutput para GET requests
             if (method.equals("GET")) {
@@ -165,87 +165,108 @@ public class ApiClient {
 
     // --- Métodos específicos de la API ---
 
-    // ¡MODIFICADO! Se quitó 'static'
-    public ApiResponse registerUser(String nombreUsuario, String correo, String password) {
+    public static ApiResponse registerUser(String nombreUsuario, String correo, String password) {
         JsonObject jsonInput = new JsonObject();
         jsonInput.addProperty("nombre_usuario", nombreUsuario);
         jsonInput.addProperty("correo", correo);
-        jsonInput.addProperty("password", password);
+        jsonInput.addProperty("password", password); // Asegúrate que tu Flask espera 'password'
         return sendRequest("register", "POST", jsonInput);
     }
 
-    // ¡MODIFICADO! Se quitó 'static'
-    public ApiResponse verifyUser(String email, String code) {
+    public static ApiResponse verifyUser(String email, String code) {
         JsonObject jsonInput = new JsonObject();
-        jsonInput.addProperty("correo", email);
+        jsonInput.addProperty("correo", email); // Tu Flask espera 'correo'
         jsonInput.addProperty("code", code);
         return sendRequest("verify", "POST", jsonInput);
     }
 
-    // ¡MODIFICADO! Se quitó 'static'
-    public ApiResponse loginUser(String correo, String password) {
+    public static ApiResponse loginUser(String correo, String password) {
         JsonObject jsonInput = new JsonObject();
-        jsonInput.addProperty("correo", correo);
+        jsonInput.addProperty("correo", correo); // Tu Flask espera 'correo' para login
         jsonInput.addProperty("password", password);
         return sendRequest("login", "POST", jsonInput);
     }
 
-    // ¡MODIFICADO! Se quitó 'static'
-    public ApiResponse resendVerificationCode(String email) {
+    public static ApiResponse resendVerificationCode(String email) {
         JsonObject jsonInput = new JsonObject();
         jsonInput.addProperty("correo", email);
         return sendRequest("resend_code", "POST", jsonInput);
     }
 
-    // ¡MODIFICADO! Se quitó 'static'
-    public ApiResponse getOrCreateCharacterProfile(int userId) {
+    public static ApiResponse getOrCreateCharacterProfile(int userId) { // <-- CAMBIO A int userId
+        // Tu Flask API tiene un endpoint como /api/profile/<int:user_id> (GET)
         return sendRequest("profile/" + userId, "GET", null);
     }
 
-    // ¡MODIFICADO! Se quitó 'static'
-    public ApiResponse updateCharacterProfile(int characterId, JsonObject updateData) {
+    public static ApiResponse updateCharacterProfile(int characterId, JsonObject updateData) {
+        // Tu Flask API tiene un endpoint como /api/profile/<int:character_id> con método PUT
         return sendRequest("profile/" + characterId, "PUT", updateData);
     }
 
-    // ¡MODIFICADO! Se quitó 'static'
-    public ApiResponse updateUserProfilePicture(int userId, String photoUrl) {
+    // Nuevo método para actualizar la foto de perfil del usuario
+    public static ApiResponse updateUserProfilePicture(int userId, String photoUrl) {
         JsonObject payload = new JsonObject();
         payload.addProperty("foto_perfil_url", photoUrl);
         return sendRequest("users/" + userId + "/profile_picture", "PUT", payload);
     }
 
-    // ¡MODIFICADO! Se quitó 'static'
-    public ApiResponse getCharacterInventory(int characterId) {
+    public static ApiResponse getCharacterInventory(int characterId) {
+        // Tu Flask API tiene un endpoint como /api/inventory/<int:character_id>
         return sendRequest("inventory/" + characterId, "GET", null);
     }
 
-    // ¡MODIFICADO! Se quitó 'static'
-    public ApiResponse addItemToInventory(int characterId, int itemId, int quantity) {
+    public static ApiResponse addItemToInventory(int characterId, int itemId, int quantity) {
         JsonObject jsonInput = new JsonObject();
         jsonInput.addProperty("item_id", itemId);
-        jsonInput.addProperty("cantidad", quantity);
+        jsonInput.addProperty("cantidad", quantity); // Tu Flask espera 'cantidad'
         return sendRequest("inventory/" + characterId + "/add", "POST", jsonInput);
     }
     
-    // ¡MODIFICADO! Se quitó 'static'
-    public ApiResponse getEnemiesDefeated(int characterId) {
+    public static ApiResponse getEnemiesDefeated(int characterId) {
         return sendRequest("enemies_defeated/" + characterId, "GET", null);
     }
-    
-    // --- ¡MÉTODOS PARA RESTABLECIMIENTO DE CONTRASEÑA! ---
-    // ¡MODIFICADO! Se quitó 'static'
-    public ApiResponse requestPasswordResetCode(String email) {
+
+    // Método para crear un personaje (separado de getOrCreateCharacterProfile)
+    public static ApiResponse createCharacter(int userId, String characterName) {
         JsonObject jsonInput = new JsonObject();
-        jsonInput.addProperty("email", email);
+        jsonInput.addProperty("usuario_id", userId);
+        jsonInput.addProperty("nombre_personaje", characterName);
+        // Asume que tu Flask tiene un endpoint POST /api/characters o similar
+        // Si tu API no tiene un endpoint específico para crear personaje,
+        // este método necesitaría ser ajustado para usar getOrCreateCharacterProfile si es el que crea.
+        // Basado en tu app.py, el endpoint es /api/profile/<user_id> que crea si no existe.
+        // Por ahora, lo dejaré como un POST a "characters" si tienes uno.
+        // Si no, deberías usar getOrCreateCharacterProfile y manejar la respuesta de creación.
+        return sendRequest("characters", "POST", jsonInput); // Asumiendo que tienes un /api/characters POST
+    }
+
+    // --- ¡NUEVOS MÉTODOS PARA RESTABLECIMIENTO DE CONTRASEÑA! ---
+
+    /**
+     * Solicita un código de restablecimiento de contraseña para un email.
+     * @param email El correo electrónico del usuario.
+     * @return ApiResponse con el resultado de la operación.
+     */
+    public static ApiResponse requestPasswordResetCode(String email) {
+        JsonObject jsonInput = new JsonObject();
+        jsonInput.addProperty("email", email); // Asegúrate que tu Flask espera 'email' para este endpoint
+        // Reemplaza "request_password_reset_code" con el endpoint real de tu API Flask si es diferente
         return sendRequest("request_password_reset_code", "POST", jsonInput);
     }
 
-    // ¡MODIFICADO! Se quitó 'static'
-    public ApiResponse resetPasswordWithCode(String email, String code, String newPassword) {
+    /**
+     * Restablece la contraseña de un usuario usando un código de verificación.
+     * @param email El correo electrónico del usuario.
+     * @param code El código de verificación recibido.
+     * @param newPassword La nueva contraseña a establecer.
+     * @return ApiResponse con el resultado de la operación.
+     */
+    public static ApiResponse resetPasswordWithCode(String email, String code, String newPassword) {
         JsonObject jsonInput = new JsonObject();
-        jsonInput.addProperty("email", email);
+        jsonInput.addProperty("email", email); // Asegúrate que tu Flask espera 'email'
         jsonInput.addProperty("code", code);
-        jsonInput.addProperty("new_password", newPassword);
+        jsonInput.addProperty("new_password", newPassword); // Asegúrate que tu Flask espera 'new_password'
+        // Reemplaza "reset_password_with_code" con el endpoint real de tu API Flask si es diferente
         return sendRequest("reset_password_with_code", "POST", jsonInput);
     }
 }

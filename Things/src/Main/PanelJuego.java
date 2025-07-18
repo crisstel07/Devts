@@ -8,14 +8,12 @@ import java.awt.*;
 import Escenarios.*;
 import java.util.ArrayList;
 import Sonido.*;
-import com.google.gson.JsonObject; // Importar JsonObject
 
 public class PanelJuego extends JPanel implements Runnable {
     public static final int ANCHO = 1365;
     public static final int ALTO = 767;
 
     private Thread gameThread;
-    private volatile boolean isGamePaused = false; // Estado de pausa del juego
     private static PanelJuego instanciaGlobal;
     public static int nivelPrevioAntesDeMuerte;
     private Jugador.EstadoJuego estadoJuego = Jugador.EstadoJuego.JUGANDO;
@@ -27,11 +25,11 @@ public class PanelJuego extends JPanel implements Runnable {
     public static int nivelActual;
     private EscenarioBase escenario;
     private double balanceoAngulo = 0;
-    private int desplazamientoY = 0;
-    private long ultimoBalanceo = 0;
-    private boolean enBalanceo = false;
-    private double anguloBalanceo = 0;
-    private int offsetYBalanceo = 0;
+private int desplazamientoY = 0;
+private long ultimoBalanceo = 0;
+private boolean enBalanceo = false;
+private double anguloBalanceo = 0;
+private int offsetYBalanceo = 0;
 
     // Transiciones
     private boolean faseFadeOut = true;
@@ -40,7 +38,7 @@ public class PanelJuego extends JPanel implements Runnable {
     private boolean enTransicionNivel = false;
     private boolean enTransicionMuerte = false;
 
-    // Estados
+    //Estados
     // Cámara
     private int camaraX = 0;
     private int anchoEscenario;
@@ -51,160 +49,73 @@ public class PanelJuego extends JPanel implements Runnable {
     private Teclado teclado;
     private java.util.List<AtaqueHitbox> hitboxesDeAtaque = new ArrayList<>();
 
-    // Hitbox
+    //HItbox
     private boolean mostrarHitboxes = false;
 
-    // Particulas
+    //Particulas
     private java.util.List<ParticulasGolpe> particulasGolpe = new ArrayList<>();
 
-    // Referencia a los datos del personaje como JsonObject
-    private JsonObject characterData;
-
-    // Instancia de GestorAudio para asegurar que su constructor se llame
-    private GestorAudio gestorAudio; 
-
-    // CONSTRUCTOR
-    public PanelJuego(JsonObject initialCharacterData) { // MODIFICADO: Ahora acepta JsonObject
+    //CONSTRUCTOR
+    public PanelJuego() {
         instanciaGlobal = this;
         this.setPreferredSize(new Dimension(ANCHO, ALTO));
         this.setBackground(Color.WHITE);
         this.setDoubleBuffered(true);
         this.setFocusable(true);
-        // this.requestFocusInWindow(); // Se llamará desde VentanaJuego.startGame()
 
-        this.characterData = initialCharacterData; // Asigna los datos iniciales del personaje
-        
-        jugador = new Jugador(); // La vida inicial de 5 se establece en el constructor de Jugador
-        
+        jugador = new Jugador();
         mouse = new Mouse();
         teclado = new Teclado();
 
         niveles = new ArrayList<>();
+        //Manejo de Niveles
+      //  niveles.add(new Final(1,jugador));
         niveles.add(new Dia(1, jugador));
         niveles.add(new Tarde(1, jugador));
         niveles.add(new Noche(1, jugador));
         niveles.add(new Muerte(1, jugador));
 
-        // Inicializa el nivel actual del juego según los datos del personaje si existen, o el nivel 0 por defecto
-        if (characterData != null && characterData.has("current_level") && !characterData.get("current_level").isJsonNull()) {
-            nivelActual = characterData.get("current_level").getAsInt();
-        } else {
-            nivelActual = 0;
-        }
+        nivelActual = 0;
         escenario = niveles.get(nivelActual);
         anchoEscenario = escenario.getAnchoTotal();
 
         this.addMouseListener(mouse);
         this.addKeyListener(teclado);
-        
-        // ¡IMPORTANTE! Crear una instancia de GestorAudio aquí
-        // Esto asegura que el constructor de GestorAudio se ejecute,
-        // inicializando las variables estáticas como 'paso'.
-        gestorAudio = new GestorAudio(); 
-        // Si quieres que la música del juego empiece aquí:
-        // gestorAudio.reproducirMusica("/Sonido/music.wav"); 
+        GestorAudio gestorAudio = new GestorAudio();
+        gestorAudio.reproducirMusica("/Sonido/music.wav");
+
     }
 
-    // Setter para el estado de pausa del juego
-    public void setGamePaused(boolean paused) {
-        this.isGamePaused = paused;
-        System.out.println("Juego pausado: " + paused);
-        if (paused) {
-            limpiarEntrada();
-        }
-    }
-
-    // Getter para el estado de pausa
-    public boolean isGamePaused() {
-        return isGamePaused;
-    }
-
-    // Método para detener el hilo del juego de forma segura
-    public void stopGameThread() {
-        if (gameThread != null) {
-            Thread dummyThread = gameThread;
-            gameThread = null; // Señala al hilo para que termine su bucle
-            dummyThread.interrupt(); // Interrumpe el hilo para sacarlo de un posible sleep/wait
-            try {
-                dummyThread.join(); // Espera a que el hilo termine completamente
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Restaura el estado de interrupción
-                System.err.println("Hilo de juego interrumpido al detener.");
-            }
-        }
-    }
-
-    // INICAR EL JUEGO
+    //INICAR EL JUEGO
     public void iniciarJuego() {
-        isGamePaused = false;
-        if (gameThread == null || !gameThread.isAlive()) { // Solo crear e iniciar si no está ya corriendo
-            gameThread = new Thread(this);
-            gameThread.start();
-        }
-        // Cargar datos del personaje desde el JsonObject
-        if (characterData != null && jugador != null) {
-            if (characterData.has("x_position") && !characterData.get("x_position").isJsonNull()) {
-                jugador.setX(characterData.get("x_position").getAsInt());
-            }
-            if (characterData.has("y_position") && !characterData.get("y_position").isJsonNull()) {
-                jugador.setY(characterData.get("y_position").getAsInt());
-            }
-            // ¡IMPORTANTE! La línea para cargar vida_actual desde la DB está COMENTADA/ELIMINADA aquí
-            // para que la vida SIEMPRE inicie en 5 (o lo que esté en Jugador.java).
-            // if (characterData.has("vida_actual") && !characterData.get("vida_actual").isJsonNull()) {
-            //     jugador.setVida(characterData.get("vida_actual").getAsInt());
-            // }
-            if (characterData.has("energia") && !characterData.get("energia").isJsonNull()) {
-                jugador.setFasesLunares(characterData.get("energia").getAsInt());
-            }
-            if (characterData.has("experiencia") && !characterData.get("experiencia").isJsonNull()) {
-                jugador.setExperience(characterData.get("experiencia").getAsInt());
-            }
-            if (characterData.has("nivel") && !characterData.get("nivel").isJsonNull()) {
-                jugador.setNivel(characterData.get("nivel").getAsInt());
-            }
-            
-            // Actualizar el escenario si el nivel ha cambiado al cargar
-            if (characterData.has("current_level") && !characterData.get("current_level").isJsonNull()) {
-                int loadedLevel = characterData.get("current_level").getAsInt();
-                if (nivelActual != loadedLevel && loadedLevel >= 0 && loadedLevel < niveles.size()) {
-                    nivelActual = loadedLevel;
-                    escenario = niveles.get(nivelActual);
-                    escenario.reiniciarEscenario();
-                    anchoEscenario = escenario.getAnchoTotal();
-                }
-            }
-        }
-        this.requestFocusInWindow(); // Asegura que PanelJuego reciba el foco al iniciar
+        gameThread = new Thread(this);
+        gameThread.start();
     }
 
-    // METODO RUN: Bucle principal del juego
+    //METODO RUN 
     @Override
     public void run() {
-        int FPS = 60;
+      int FPS = 60;
         double intervalo = 1_000_000_000 / FPS;
         double delta = 0;
         long tiempoAnterior = System.nanoTime();
 
-        while (gameThread != null) { // El bucle continúa mientras gameThread no sea nulo
+        while (gameThread != null) {
             long tiempoActual = System.nanoTime();
             delta += (tiempoActual - tiempoAnterior) / intervalo;
             tiempoAnterior = tiempoActual;
 
             if (delta >= 1) {
-                if (!isGamePaused) { // ¡Solo actualiza la lógica del juego si NO está pausado!
-                    actualizar();
-                }
-                repaint(); // Siempre repinta para mostrar el menú de pausa o el juego
+                actualizar();
+                repaint();
                 delta--;
             }
         }
+     
     }
 
     public void limpiarEntrada() {
         teclado.resetear();
-        mouse.resetear();
-        Controles.Teclado.desbloquear(); // ¡NUEVO! Asegura que el teclado se desbloquee al limpiar la entrada
     }
 
     public static void cambiarNivelEstatico(int nuevoNivel) {
@@ -217,13 +128,13 @@ public class PanelJuego extends JPanel implements Runnable {
         enTransicionNivel = false;
         enTransicionMuerte = false;
         enTransicionReintento = false;
+
     }
 
     public void iniciarTransicionReintento(int nivelDestino) {
         resetearTransiciones();
         nivelReintentoDestino = nivelDestino;
         faseFadeOut = true;
-        opacidadTransicion = 0; // Resetear opacidad para un nuevo fade
         enTransicionReintento = true;
     }
 
@@ -241,6 +152,7 @@ public class PanelJuego extends JPanel implements Runnable {
     public static void iniciarTransicionReintentoEstatico(int nivelDestino) {
         if (instanciaGlobal != null) {
             instanciaGlobal.iniciarTransicionReintento(nivelDestino);
+           
         }
     }
 
@@ -258,6 +170,7 @@ public class PanelJuego extends JPanel implements Runnable {
         enTransicionMuerte = true;
         jugador.renacer();
         iniciarFade();
+
     }
 
     private void cambiarANivelSiguiente() {
@@ -278,13 +191,14 @@ public class PanelJuego extends JPanel implements Runnable {
 
     private void cambiarANivelMuerte() {
         nivelPrevioAntesDeMuerte = nivelActual;
-        nivelActual = 3;
+        nivelActual = 3;  // índice de tu escenario Muerte
         escenario = niveles.get(nivelActual);
         anchoEscenario = escenario.getAnchoTotal();
         jugador.x = 650;
         jugador.renacer();
         limpiarEntrada();
         resetearTransiciones();
+
     }
 
     // ACTUALIZAR LOGICA DEL JUEGO
@@ -294,11 +208,13 @@ public class PanelJuego extends JPanel implements Runnable {
             jugador.actualizar(false, false, false, false, false, false, anchoEscenario + 300);
             teclado.resetear();
             mouse.resetear();
-            
+           
+
             // Esperar que termine animación de muerte y reiniciar
             if (jugador.animacionMuerteTerminada() && !enTransicionMuerte && !enTransicionNivel && opacidadTransicion == 0) {
                 iniciarTransicionMuerte();
             }
+
         }
 
         if (faseFadeOut) {
@@ -320,34 +236,24 @@ public class PanelJuego extends JPanel implements Runnable {
             opacidadTransicion -= 5;
         }
 
-        // Manejo de curación (solo si el juego NO está pausado)
-        if (!isGamePaused) { 
-            if (teclado.curar) {
-                if (!jugador.estaCargandoCuracion()) {
-                    jugador.comenzarCuracion();
-                }
-            } else {
-                jugador.cancelarCuracion();
+        // Manejo de curación
+        if (teclado.curar) {
+            if (!jugador.estaCargandoCuracion()) {
+                jugador.comenzarCuracion();
             }
+        } else {
+            jugador.cancelarCuracion();
         }
 
         jugador.actualizarCuracion();
 
-        // ✅ Actualizar al jugador (mueve, salta, ataca, animaciones) (solo si el juego NO está pausado)
-        if (!isGamePaused) {
-            jugador.actualizar(
-                    teclado.izquierda, teclado.derecha, teclado.arriba, teclado.abajo,
-                    mouse.atacar, teclado.saltar,
-                    anchoEscenario + 300
-            );
-        } else {
-            // Si el juego está pausado, actualiza al jugador sin entrada de movimiento/ataque
-            // para que las animaciones de idle o muerte sigan reproduciéndose si es necesario.
-            jugador.actualizar(false, false, false, false, false, false, anchoEscenario + 300);
-        }
-        
-        // ¡NUEVO! Actualizar CharacterData con el estado actual del jugador para el guardado
-        updateCharacterDataFromPlayer();
+        // ✅ Actualizar al jugador (mueve, salta, ataca, animaciones)
+        jugador.actualizar(
+                teclado.izquierda, teclado.derecha, teclado.arriba, teclado.abajo,
+                mouse.atacar, teclado.saltar,
+                anchoEscenario + 300
+        );
+      
 
         // ✅ Manejar transiciones de nivel
         // ✅ Ajustar la cámara
@@ -358,101 +264,56 @@ public class PanelJuego extends JPanel implements Runnable {
             iniciarTransicionNivel();
         }
 
+        // ✅ Actualizar enemigos
         escenario.actualizarEnemigos();
 
+        // ✅ Resolver colisión (empuje) con enemigos
         for (EnemigoBase enemigo : escenario.getEnemigos()) {
             resolverEmpuje(jugador, enemigo);
         }
 
+        // ✅ Verificar daño por colisión con enemigos
         verificarDañoPorColision();
 
+        // ✅ Generar nueva hitbox de ataque si corresponde
         jugador.generarHitboxAtaque(hitboxesDeAtaque);
 
+        // ✅ Daño cuerpo a cuerpo directo
         verificarDañoCuerpoACuerpo();
 
+        // ✅ Actualizar y limpiar hitboxes expiradas
         actualizarHitboxes();
 
+        // ✅ Aplicar daño a enemigos por hitboxes activas
         verificarDañoPorHitboxes();
 
+        // ✅ Actualizar partículas
         actualizarParticulas();
 
+        // ✅ Mostrar hitboxes si está activado
         mostrarHitboxes = teclado.mostrarHitbox;
         
-        long ahora = System.currentTimeMillis();
-        if (ahora - ultimoBalanceo > 6000 && !enBalanceo) { // cada 6 segundos
-            enBalanceo = true;
-            anguloBalanceo = 0;
-            ultimoBalanceo = ahora;
-        }
+    //    if (nivelActual ==0) {
+    //jugador.limitarMovimiento(0, ANCHO);
+    //}
 
-        // Si está en balanceo
-        if (enBalanceo) {
-            anguloBalanceo += 0.1;
-            offsetYBalanceo = (int)(Math.sin(anguloBalanceo) * 4);
+    long ahora = System.currentTimeMillis();
+if (ahora - ultimoBalanceo > 6000 && !enBalanceo) { // cada 6 segundos
+    enBalanceo = true;
+    anguloBalanceo = 0;
+    ultimoBalanceo = ahora;
+}
 
-            if (anguloBalanceo > Math.PI) {
-                enBalanceo = false;
-                offsetYBalanceo = 0;
-            }
-        }
+// Si está en balanceo
+if (enBalanceo) {
+    anguloBalanceo += 0.1;
+    offsetYBalanceo = (int)(Math.sin(anguloBalanceo) * 4);
+
+    if (anguloBalanceo > Math.PI) {
+        enBalanceo = false;
+        offsetYBalanceo = 0;
     }
-
-    // ¡NUEVO! Método para actualizar el objeto CharacterData con el estado actual del jugador
-    private void updateCharacterDataFromPlayer() {
-        if (characterData != null && jugador != null) {
-            // Asegúrate de que tu clase Jugador tenga getters para estos atributos
-            characterData.addProperty("x_position", jugador.getX());
-            characterData.addProperty("y_position", jugador.getY());
-            characterData.addProperty("vida_actual", jugador.getVida()); // Usar getVida()
-            characterData.addProperty("energia", jugador.getFasesLunares()); // Usar getFasesLunares()
-            characterData.addProperty("experiencia", jugador.getExperience()); // Guardar experiencia
-            characterData.addProperty("nivel", jugador.getNivel()); // Guardar nivel del jugador
-            characterData.addProperty("current_level", nivelActual); // Guardar el nivel actual del escenario
-        }
-    }
-
-    // ¡NUEVO! Método para obtener el CharacterData actual del juego para guardarlo
-    public JsonObject getCurrentCharacterData() {
-        // Asegúrate de que characterData siempre esté actualizado antes de devolverlo
-        updateCharacterDataFromPlayer(); // Llama a este método para sincronizar
-        return characterData;
-    }
-
-    // ¡NUEVO! Setter para actualizar el CharacterData si se cambia externamente (ej. al cargar un nuevo juego)
-    public void setCharacterData(JsonObject newCharacterData) {
-        this.characterData = newCharacterData;
-        // También actualiza el jugador y el nivel si es necesario
-        if (jugador != null && newCharacterData != null) {
-            if (newCharacterData.has("x_position") && !newCharacterData.get("x_position").isJsonNull()) {
-                jugador.setX(newCharacterData.get("x_position").getAsInt());
-            }
-            if (newCharacterData.has("y_position") && !newCharacterData.get("y_position").isJsonNull()) {
-                jugador.setY(newCharacterData.get("y_position").getAsInt());
-            }
-            // ¡IMPORTANTE! La línea para cargar vida_actual desde la DB está COMENTADA/ELIMINADA aquí
-            // para que la vida SIEMPRE inicie en 5 (o lo que esté en Jugador.java).
-            // if (newCharacterData.has("vida_actual") && !newCharacterData.get("vida_actual").isJsonNull()) {
-            //     jugador.setVida(newCharacterData.get("vida_actual").getAsInt());
-            // }
-            if (newCharacterData.has("energia") && !newCharacterData.get("energia").isJsonNull()) {
-                jugador.setFasesLunares(newCharacterData.get("energia").getAsInt());
-            }
-            if (newCharacterData.has("experiencia") && !newCharacterData.get("experiencia").isJsonNull()) {
-                jugador.setExperience(newCharacterData.get("experiencia").getAsInt());
-            }
-            if (newCharacterData.has("nivel") && !newCharacterData.get("nivel").isJsonNull()) {
-                jugador.setNivel(newCharacterData.get("nivel").getAsInt());
-            }
-        }
-        if (newCharacterData.has("current_level") && !newCharacterData.get("current_level").isJsonNull()) {
-            int newLevel = newCharacterData.get("current_level").getAsInt();
-            if (nivelActual != newLevel && newLevel >= 0 && newLevel < niveles.size()) {
-                nivelActual = newLevel;
-                escenario = niveles.get(nivelActual);
-                escenario.reiniciarEscenario();
-                anchoEscenario = escenario.getAnchoTotal();
-            }
-        }
+}
     }
 
     private void actualizarCamara() {
@@ -488,13 +349,7 @@ public class PanelJuego extends JPanel implements Runnable {
             for (EnemigoBase enemigo : escenario.getEnemigos()) {
                 if (enemigo.estaVivo() && jugador.getRect().intersects(enemigo.getRect())) {
                     int direccionEmpuje = (jugador.getX() < enemigo.getX()) ? +60 : -60;
-                    GestorAudio.reproducirEfecto("pegar"); // Asegúrate de que este efecto exista
-                    boolean murio = enemigo.recibirDano(1, direccionEmpuje);
-                    if (murio) {
-                        jugador.ganarFaseLunar();
-                    }
-
-                    generarParticulasGolpe(enemigo.getX(), enemigo.getY());
+                    enemigo.recibirDano(1, direccionEmpuje);
                 }
             }
         }
@@ -519,7 +374,7 @@ public class PanelJuego extends JPanel implements Runnable {
             for (AtaqueHitbox hb : hitboxesDeAtaque) {
                 if (hb.getRect().intersects(enemigo.getRect())) {
                     int direccionEmpuje = (jugador.getX() < enemigo.getX()) ? +50 : -50;
-                    GestorAudio.reproducirEfecto("pegar"); // Asegúrate de que este efecto exista
+                       GestorAudio.reproducirEfecto("pegar");
                     boolean murio = enemigo.recibirDano(1, direccionEmpuje);
                     if (murio) {
                         jugador.ganarFaseLunar();
@@ -576,68 +431,69 @@ public class PanelJuego extends JPanel implements Runnable {
     }
 
     // -----------------------------------------------------------------
-    // DIBUJAR
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
+    // DIBUJAR 
+   @Override
+protected void paintComponent(Graphics g) {
+    super.paintComponent(g);
 
-        // 🌀 Aplicar el balanceo vertical
-        g.translate(0, offsetYBalanceo);
+    // 🌀 Aplicar el balanceo vertical
+    g.translate(0, offsetYBalanceo);
 
-        int camaraX = this.camaraX;
+    int camaraX = this.camaraX;
 
-        escenario.dibujarFondo(g, camaraX, ANCHO, ALTO);
-        escenario.dibujarElementos(g, camaraX);
-        jugador.dibujar(g, camaraX); // Jugador dibuja su propio HUD
-        
-        escenario.dibujarEnemigos(g, camaraX);
-        for (ParticulasGolpe p : particulasGolpe) {
-            p.dibujar(g, camaraX);
+    escenario.dibujarFondo(g, camaraX, ANCHO, ALTO);
+     escenario.dibujarElementos(g, camaraX);
+    jugador.dibujar(g, camaraX);
+   
+    escenario.dibujarEnemigos(g, camaraX);
+    for (ParticulasGolpe p : particulasGolpe) {
+        p.dibujar(g, camaraX);
+    }
+
+    if (faseFadeOut || opacidadTransicion > 0) {
+        Graphics2D g2 = (Graphics2D) g;
+        g2.setColor(new Color(0, 0, 0, opacidadTransicion));
+        g2.fillRect(0, 0, ANCHO, ALTO);
+    }
+
+    if (mostrarHitboxes) {
+        // Dibujo de hitboxes (ya con el balanceo aplicado)
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setColor(Color.RED);
+        Rectangle rJugador = jugador.getRect();
+        g2d.drawRect(rJugador.x - camaraX, rJugador.y, rJugador.width, rJugador.height);
+
+        g2d.setColor(Color.BLUE);
+        for (EnemigoBase enemigo : escenario.getEnemigos()) {
+            if (enemigo.estaVivo()) {
+                Rectangle rEnemigo = enemigo.getRect();
+                g2d.drawRect(rEnemigo.x - camaraX, rEnemigo.y, rEnemigo.width, rEnemigo.height);
+            }
         }
 
-        if (faseFadeOut || opacidadTransicion > 0) {
-            Graphics2D g2 = (Graphics2D) g;
-            g2.setColor(new Color(0, 0, 0, opacidadTransicion));
-            g2.fillRect(0, 0, ANCHO, ALTO);
+        for (AtaqueHitbox hb : hitboxesDeAtaque) {
+            hb.dibujar(g, camaraX);
         }
 
-        if (mostrarHitboxes) {
-            Graphics2D g2d = (Graphics2D) g;
-            g2d.setColor(Color.RED);
-            Rectangle rJugador = jugador.getRect();
-            g2d.drawRect(rJugador.x - camaraX, rJugador.y, rJugador.width, rJugador.height);
+        g2d.draw(Muerte.hitboxReintentar);
+        g2d.draw(Muerte.hitboxSalir);
 
-            g2d.setColor(Color.BLUE);
-            for (EnemigoBase enemigo : escenario.getEnemigos()) {
-                if (enemigo.estaVivo()) {
-                    Rectangle rEnemigo = enemigo.getRect();
-                    g2d.drawRect(rEnemigo.x - camaraX, rEnemigo.y, rEnemigo.width, rEnemigo.height);
-                }
-            }
-
-            for (AtaqueHitbox hb : hitboxesDeAtaque) {
-                hb.dibujar(g, camaraX);
-            }
-
-            g2d.draw(Muerte.hitboxReintentar);
-            g2d.draw(Muerte.hitboxSalir);
-
-            g2d.setColor(Color.ORANGE);
-            for (EnemigoBase enemigo : escenario.getEnemigos()) {
-                if (enemigo instanceof Fargano) {
-                    Fargano fargano = (Fargano) enemigo;
-                    for (BalaFargano b : fargano.getBalas()) {
-                        if (b.isActiva()) {
-                            Rectangle rBala = b.getRect();
-                            g2d.drawRect(rBala.x - camaraX, rBala.y, rBala.width, rBala.height);
-                        }
+        g2d.setColor(Color.ORANGE);
+        for (EnemigoBase enemigo : escenario.getEnemigos()) {
+            if (enemigo instanceof Fargano) {
+                Fargano fargano = (Fargano) enemigo;
+                for (BalaFargano b : fargano.getBalas()) {
+                    if (b.isActiva()) {
+                        Rectangle rBala = b.getRect();
+                        g2d.drawRect(rBala.x - camaraX, rBala.y, rBala.width, rBala.height);
                     }
                 }
             }
         }
-
-        // 🔁 Revertir el translate para evitar afectar componentes futuros
-        g.translate(0, -offsetYBalanceo);
     }
+
+    // 🔁 Revertir el translate para evitar afectar componentes futuros
+    g.translate(0, -offsetYBalanceo);
 }
 
+}

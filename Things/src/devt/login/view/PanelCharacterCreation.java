@@ -1,213 +1,202 @@
-package devt.login.view;
+package devt.login.view; // ¡IMPORTANTE! Asegúrate de que esta ruta sea la correcta para tu archivo.
+                         // Si está en 'devt.login.components', cambia esta línea.
 
-import com.google.gson.JsonObject;
-import devt.login.apiFlask.ApiClient; // Importar ApiClient
-import devt.login.apiFlask.ApiClient.ApiResponse;
-import devt.login.components.Message;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import com.google.gson.JsonObject;
+import devt.login.apiFlask.ApiClient;
+import devt.login.apiFlask.ApiClient.ApiResponse;
 import java.awt.event.ActionEvent;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
-import javax.swing.border.TitledBorder;
-import javax.swing.event.EventListenerList;
+import devt.login.components.Message; // Importar tu clase Message
 
 public class PanelCharacterCreation extends JPanel {
 
     private int userId;
     private JTextField txtCharacterName;
-    private JButton btnCreateCharacter;
+    private JButton btnConfirmName;
+    private JLabel lblMessage;
     private JButton btnBackToLogin;
-    private MessageDisplayCallback messageCallback;
 
-    // ¡NUEVO! Instancia de ApiClient
-    private final ApiClient apiClient;
+    private ActionListener characterCreatedListener;
+    private ActionListener backToLoginListener;
 
-    public PanelCharacterCreation(int userId, MessageDisplayCallback messageCallback) {
-        // ¡NUEVO! Inicializar la instancia de ApiClient
-        this.apiClient = new ApiClient();
-
-        this.userId = userId;
-        this.messageCallback = messageCallback;
-        initComponents();
+    // ¡NUEVA INTERFAZ! Para que LoginBase pueda implementar cómo mostrar mensajes
+    // Esta interfaz permite que PanelCharacterCreation "llame de vuelta" a LoginBase para mostrar un Message.
+    public interface MessageDisplayCallback {
+        void showMessage(Message.MessageType type, String message);
     }
 
-    // Setter para actualizar el userId si el panel se reutiliza
+    private MessageDisplayCallback messageCallback; // Instancia del callback para mostrar mensajes
+
+    // ¡CONSTRUCTOR MODIFICADO! Ahora acepta el callback de mensajes
+    public PanelCharacterCreation(int userId, MessageDisplayCallback callback) {
+        this.userId = userId;
+        this.messageCallback = callback; // Guarda la referencia al método showMessage de LoginBase
+        initUI();
+    }
+
+    // Constructor alternativo (si se usa, el callback será null, cuidado al llamar showMessage)
+    public PanelCharacterCreation(int userId) {
+        this(userId, null); // Llama al constructor principal con un callback nulo por defecto
+    }
+
     public void setUserId(int userId) {
         this.userId = userId;
     }
 
-    // Setter para actualizar el callback de mensajes
-    public void setMessageCallback(MessageDisplayCallback messageCallback) {
-        this.messageCallback = messageCallback;
+    // ¡NUEVO! Setter para el callback, útil si el panel se reutiliza o se inicializa sin él.
+    public void setMessageCallback(MessageDisplayCallback callback) {
+        this.messageCallback = callback;
     }
 
-    private void initComponents() {
+    private void initUI() {
         setLayout(new GridBagLayout());
-        setBackground(new Color(20, 20, 20));
+        setBackground(new Color(25, 25, 25));
         setBorder(new EmptyBorder(50, 50, 50, 50));
 
-        JPanel contentPanel = new JPanel();
-        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
-        contentPanel.setBackground(new Color(30, 30, 30));
-        contentPanel.setBorder(BorderFactory.createCompoundBorder(
-                new TitledBorder(new LineBorder(new Color(0, 150, 255), 2), "Crear Personaje", TitledBorder.CENTER, TitledBorder.TOP, new Font("Arial", Font.BOLD, 24), new Color(0, 150, 255)),
-                new EmptyBorder(30, 30, 30, 30)
-        ));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.CENTER;
 
-        JLabel lblTitle = new JLabel("¡Bienvenido, Aventurero!");
-        lblTitle.setFont(new Font("Arial", Font.BOLD, 30));
-        lblTitle.setForeground(new Color(255, 215, 0));
-        lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
-        contentPanel.add(lblTitle);
-        contentPanel.add(Box.createVerticalStrut(20));
+        JLabel titleLabel = new JLabel("¡Bienvenido, Aventurero!");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 40));
+        titleLabel.setForeground(new Color(255, 215, 0));
+        gbc.gridwidth = 2;
+        add(titleLabel, gbc);
 
-        JLabel lblInstructions = new JLabel("Para comenzar tu viaje, dale un nombre a tu personaje:");
-        lblInstructions.setFont(new Font("Arial", Font.PLAIN, 18));
-        lblInstructions.setForeground(Color.WHITE);
-        lblInstructions.setAlignmentX(Component.CENTER_ALIGNMENT);
-        contentPanel.add(lblInstructions);
-        contentPanel.add(Box.createVerticalStrut(30));
+        gbc.gridy++;
+        lblMessage = new JLabel("Antes de empezar, dale un nombre a tu personaje:");
+        lblMessage.setFont(new Font("Arial", Font.PLAIN, 18));
+        lblMessage.setForeground(new Color(200, 200, 200));
+        add(lblMessage, gbc);
 
+        gbc.gridy++;
         txtCharacterName = new JTextField(20);
         txtCharacterName.setFont(new Font("Arial", Font.PLAIN, 20));
-        txtCharacterName.setMaximumSize(new Dimension(300, 40));
-        txtCharacterName.setAlignmentX(Component.CENTER_ALIGNMENT);
-        contentPanel.add(txtCharacterName);
-        contentPanel.add(Box.createVerticalStrut(30));
+        txtCharacterName.setBackground(new Color(50, 50, 50));
+        txtCharacterName.setForeground(Color.WHITE);
+        txtCharacterName.setCaretColor(Color.WHITE);
+        txtCharacterName.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(100, 100, 100), 1),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        add(txtCharacterName, gbc);
 
-        btnCreateCharacter = new JButton("Crear Personaje");
-        btnCreateCharacter.setFont(new Font("Arial", Font.BOLD, 22));
-        btnCreateCharacter.setBackground(new Color(50, 150, 50));
-        btnCreateCharacter.setForeground(Color.WHITE);
-        btnCreateCharacter.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btnCreateCharacter.addActionListener(e -> createCharacter());
-        contentPanel.add(btnCreateCharacter);
-        contentPanel.add(Box.createVerticalStrut(20));
+        gbc.gridy++;
+        btnConfirmName = new JButton("Confirmar Nombre");
+        btnConfirmName.setFont(new Font("Arial", Font.BOLD, 22));
+        btnConfirmName.setBackground(new Color(50, 150, 50));
+        btnConfirmName.setForeground(Color.WHITE);
+        btnConfirmName.setFocusPainted(false);
+        btnConfirmName.addActionListener(e -> createOrUpdateCharacterName());
+        add(btnConfirmName, gbc);
 
+        gbc.gridy++;
         btnBackToLogin = new JButton("Volver al Login");
-        btnBackToLogin.setFont(new Font("Arial", Font.PLAIN, 16));
-        btnBackToLogin.setBackground(new Color(70, 70, 70));
+        btnBackToLogin.setFont(new Font("Arial", Font.BOLD, 18));
+        btnBackToLogin.setBackground(new Color(150, 50, 50));
         btnBackToLogin.setForeground(Color.WHITE);
-        btnBackToLogin.setAlignmentX(Component.CENTER_ALIGNMENT);
-        // Este listener se añade externamente en LoginBase
-        contentPanel.add(btnBackToLogin);
-
-        add(contentPanel, new GridBagConstraints());
+        btnBackToLogin.setFocusPainted(false);
+        btnBackToLogin.addActionListener(e -> {
+            if (backToLoginListener != null) {
+                backToLoginListener.actionPerformed(e);
+            }
+        });
+        add(btnBackToLogin, gbc);
     }
 
-    private void createCharacter() {
-        String characterName = txtCharacterName.getText().trim();
+    private void createOrUpdateCharacterName() {
+        String newName = txtCharacterName.getText().trim();
 
-        if (characterName.isEmpty()) {
+        if (newName.isEmpty()) {
+            // ¡MODIFICADO! Usar el callback para mostrar el mensaje de error
             if (messageCallback != null) {
                 messageCallback.showMessage(Message.MessageType.ERROR, "El nombre del personaje no puede estar vacío.");
             }
             return;
         }
 
-        // Deshabilitar el botón para evitar múltiples clics
-        btnCreateCharacter.setEnabled(false);
+        btnConfirmName.setEnabled(false);
+        btnBackToLogin.setEnabled(false);
+        lblMessage.setText("Procesando...");
+        lblMessage.setForeground(new Color(0, 150, 255));
 
-        new SwingWorker<ApiClient.ApiResponse, Void>() {
+        new SwingWorker<ApiResponse, Void>() {
             @Override
-            protected ApiClient.ApiResponse doInBackground() throws Exception {
-                // ¡MODIFICADO! Llamar a getOrCreateCharacterProfile en lugar de createCharacter
-                // Este endpoint en Flask ya crea el personaje si no existe.
-                // Asegúrate de que tu Flask maneje la creación con user_id y nombre_personaje
-                // si el personaje no existe.
-                return apiClient.getOrCreateCharacterProfile(userId); // ¡MODIFICADO! Usar la instancia de apiClient
-            }
-
-            @Override
-            protected void done() {
-                btnCreateCharacter.setEnabled(true); // Habilitar el botón de nuevo
-                try {
-                    ApiResponse response = get();
-                    if (response.isSuccess()) {
-                        JsonObject characterData = response.getDataAsJsonObject();
-                        if (characterData != null) {
-                            // Si el personaje se creó con éxito, ahora lo actualizamos con el nombre
-                            updateCharacterNameOnServer(characterData.get("id").getAsInt(), characterName);
-                        } else {
-                            if (messageCallback != null) {
-                                messageCallback.showMessage(Message.MessageType.ERROR, "Error: Datos de personaje nulos después de la creación.");
-                            }
-                        }
-                    } else {
-                        if (messageCallback != null) {
-                            messageCallback.showMessage(Message.MessageType.ERROR, "Error al crear personaje: " + response.getMessage());
-                        }
-                    }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    if (messageCallback != null) {
-                        messageCallback.showMessage(Message.MessageType.ERROR, "Error inesperado al crear personaje: " + ex.getMessage());
-                    }
+            protected ApiResponse doInBackground() throws Exception {
+                ApiResponse getOrCreateResponse = ApiClient.getOrCreateCharacterProfile(userId);
+                
+                if (!getOrCreateResponse.isSuccess() || getOrCreateResponse.getDataAsJsonObject() == null) {
+                    return new ApiResponse(false, "Error al obtener/crear personaje: " + getOrCreateResponse.getMessage(), null, getOrCreateResponse.getErrorCode());
                 }
-            }
-        }.execute();
-    }
 
-    private void updateCharacterNameOnServer(int characterId, String newName) {
-        new SwingWorker<ApiClient.ApiResponse, Void>() {
-            @Override
-            protected ApiClient.ApiResponse doInBackground() throws Exception {
+                JsonObject characterData = getOrCreateResponse.getDataAsJsonObject();
+                int characterId = characterData.get("id").getAsInt();
+                
+                String existingName = characterData.has("nombre_personaje") && !characterData.get("nombre_personaje").isJsonNull()
+                                             ? characterData.get("nombre_personaje").getAsString() : null;
+                
+                if (existingName != null && !existingName.equals("None") && !existingName.isEmpty() && !existingName.equals(newName)) {
+                    // ¡MODIFICADO! Usar el callback para mostrar el mensaje de conflicto
+                    if (messageCallback != null) {
+                        messageCallback.showMessage(Message.MessageType.WARNING, "Este personaje ya tiene un nombre asignado: " + existingName);
+                    }
+                    return new ApiResponse(false, "Este personaje ya tiene un nombre asignado.", null, 409);
+                }
+
                 JsonObject updateData = new JsonObject();
                 updateData.addProperty("nombre_personaje", newName);
-                // ¡MODIFICADO! Usar la instancia de apiClient
-                return apiClient.updateCharacterProfile(characterId, updateData);
+                return ApiClient.updateCharacterProfile(characterId, updateData);
             }
 
             @Override
             protected void done() {
+                btnConfirmName.setEnabled(true);
+                btnBackToLogin.setEnabled(true);
                 try {
-                    ApiResponse response = get();
-                    if (response.isSuccess()) {
+                    ApiResponse result = get();
+                    if (result.isSuccess()) {
+                        // ¡MODIFICADO! Usar el callback para mostrar el mensaje de éxito
                         if (messageCallback != null) {
-                            messageCallback.showMessage(Message.MessageType.SUCCESS, "¡Personaje '" + newName + "' creado y nombre actualizado!");
+                            messageCallback.showMessage(Message.MessageType.SUCCESS, "Nombre '" + newName + "' guardado exitosamente!");
                         }
-                        // Notificar a LoginBase que el personaje fue creado/actualizado
-                        fireCharacterCreatedEvent();
+                        lblMessage.setText("Nombre guardado. ¡Preparando el juego!");
+                        lblMessage.setForeground(new Color(50, 150, 50));
+
+                        if (characterCreatedListener != null) {
+                            characterCreatedListener.actionPerformed(new ActionEvent(PanelCharacterCreation.this, ActionEvent.ACTION_PERFORMED, "characterCreated"));
+                        }
                     } else {
+                        // ¡MODIFICADO! Usar el callback para mostrar el mensaje de error
                         if (messageCallback != null) {
-                            messageCallback.showMessage(Message.MessageType.ERROR, "Error al actualizar nombre del personaje: " + response.getMessage());
+                            messageCallback.showMessage(Message.MessageType.ERROR, "Error al guardar el nombre: " + result.getMessage());
                         }
+                        lblMessage.setText("Error: " + result.getMessage());
+                        lblMessage.setForeground(new Color(200, 50, 50));
                     }
                 } catch (Exception ex) {
                     ex.printStackTrace();
+                    // ¡MODIFICADO! Usar el callback para mostrar el mensaje de error inesperado
                     if (messageCallback != null) {
-                        messageCallback.showMessage(Message.MessageType.ERROR, "Error inesperado al actualizar nombre: " + ex.getMessage());
+                        messageCallback.showMessage(Message.MessageType.ERROR, "Error inesperado: " + ex.getMessage());
                     }
+                    lblMessage.setText("Error inesperado.");
+                    lblMessage.setForeground(new Color(200, 50, 50));
                 }
             }
         }.execute();
     }
 
-
-    // --- Callbacks y Listeners ---
-    public interface MessageDisplayCallback {
-        void showMessage(Message.MessageType type, String message);
-    }
-
-    private final EventListenerList listenerList = new EventListenerList();
-    private static final String CHARACTER_CREATED = "characterCreated";
-    private static final String BACK_TO_LOGIN = "backToLogin";
-
     public void addCharacterCreatedListener(ActionListener listener) {
-        listenerList.add(ActionListener.class, listener);
+        this.characterCreatedListener = listener;
     }
 
     public void addBackToLoginListener(ActionListener listener) {
-        btnBackToLogin.addActionListener(listener); // Adjuntar directamente al botón
-    }
-
-    protected void fireCharacterCreatedEvent() {
-        ActionListener[] listeners = listenerList.getListeners(ActionListener.class);
-        for (ActionListener listener : listeners) {
-            listener.actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, CHARACTER_CREATED));
-        }
+        this.backToLoginListener = listener;
     }
 }
-

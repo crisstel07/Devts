@@ -16,7 +16,7 @@ import javax.imageio.ImageIO;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import devt.login.apiFlask.ApiClient; // Importar ApiClient
+import devt.login.apiFlask.ApiClient;
 import devt.login.apiFlask.ApiClient.ApiResponse;
 import java.awt.image.BufferedImage;
 
@@ -63,11 +63,6 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
 
     // Listener para el botón de volver al menú principal
     private ActionListener backToMenuListener;
-    // Listener para el botón de cerrar sesión
-    private ActionListener logoutActionListener;
-
-    // ¡NUEVO! Instancia de ApiClient
-    private final ApiClient apiClient;
 
     // Ruta base para las imágenes de perfil de usuario (en el sistema de archivos)
     private static final String USER_PROFILE_IMAGES_DIR;
@@ -81,9 +76,6 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
 
 
     public PanelProfileAndInventory(JsonObject userDataFromLogin) {
-        // ¡NUEVO! Inicializar la instancia de ApiClient
-        this.apiClient = new ApiClient();
-
         this.currentUserData = userDataFromLogin;
         
         // Obtener el ID del usuario al inicializar
@@ -100,18 +92,7 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         initComponents();
     }
 
-    // Método para actualizar los datos del USUARIO (llamado desde LoginBase)
-    public void updateUserData(JsonObject userData) {
-        this.currentUserData = userData;
-        if (currentUserData != null && currentUserData.has("id") && !currentUserData.get("id").isJsonNull()) {
-            this.userId = currentUserData.get("id").getAsInt();
-        } else {
-            this.userId = null;
-        }
-        updateProfileUI(); // Refrescar la UI con los nuevos datos del usuario
-    }
-
-    // Método para cargar los datos iniciales del PERSONAJE (llamado desde LoginBase/ViewSystem)
+    // Método para cargar los datos iniciales (llamado desde LoginBase/ViewSystem)
     public void loadData(JsonObject characterData) {
         this.currentCharacterData = characterData;
         
@@ -196,13 +177,13 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         personalDataPanel.add(Box.createVerticalStrut(20));
 
         // Datos del usuario (del login)
-        lblUsername = new JLabel("Usuario: N/A"); 
+        lblUsername = new JLabel("Usuario: " + currentUserData.get("nombre_usuario").getAsString());
         lblUsername.setFont(statFont); lblUsername.setForeground(statColor);
         lblUsername.setAlignmentX(Component.CENTER_ALIGNMENT);
         personalDataPanel.add(lblUsername);
         personalDataPanel.add(Box.createVerticalStrut(5));
 
-        lblEmail = new JLabel("Correo: N/A");
+        lblEmail = new JLabel("Correo: " + currentUserData.get("correo").getAsString());
         lblEmail.setFont(statFont); lblEmail.setForeground(statColor);
         lblEmail.setAlignmentX(Component.CENTER_ALIGNMENT);
         personalDataPanel.add(lblEmail);
@@ -223,11 +204,6 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         btnLogout.setForeground(Color.WHITE);
         btnLogout.setFont(new Font("Arial", Font.BOLD, 18));
         btnLogout.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btnLogout.addActionListener(e -> {
-            if (logoutActionListener != null) {
-                logoutActionListener.actionPerformed(e);
-            }
-        });
         personalDataPanel.add(btnLogout);
         personalDataPanel.add(Box.createVerticalStrut(10));
 
@@ -308,11 +284,6 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         btnBackToMainMenu.setFont(buttonFont);
         btnBackToMainMenu.setBackground(new Color(100, 50, 150));
         btnBackToMainMenu.setForeground(Color.WHITE);
-        btnBackToMainMenu.addActionListener(e -> {
-            if (backToMenuListener != null) {
-                backToMenuListener.actionPerformed(e);
-            }
-        });
         navigationButtonsPanel.add(btnBackToMainMenu);
 
 
@@ -329,12 +300,12 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
     // --- Métodos de Carga y Actualización de Datos ---
     private void updateProfileUI() {
         if (currentUserData != null) {
-            lblUsername.setText("Usuario: " + (currentUserData.has("nombre_usuario") && !currentUserData.get("nombre_usuario").isJsonNull() ? currentUserData.get("nombre_usuario").getAsString() : "N/A")); // ¡MODIFICADO!
-            lblEmail.setText("Correo: " + (currentUserData.has("correo") && !currentUserData.get("correo").isJsonNull() ? currentUserData.get("correo").getAsString() : "N/A")); // ¡MODIFICADO!
+            lblUsername.setText("Usuario: " + currentUserData.get("nombre_usuario").getAsString());
+            lblEmail.setText("Correo: " + currentUserData.get("correo").getAsString());
             
             // Obtener la URL de la foto de perfil del USUARIO
             String photoUrl = currentUserData.has("foto_perfil_url") && !currentUserData.get("foto_perfil_url").isJsonNull()
-                                     ? currentUserData.get("foto_perfil_url").getAsString() : "/devt/login/images/profile_images/default_user.png"; // Default si no hay
+                                    ? currentUserData.get("foto_perfil_url").getAsString() : "/devt/login/images/profile_images/default_user.png"; // Default si no hay
             
             // Cargar la imagen usando el método modificado
             loadImage(photoUrl, lblProfilePicture, 150, 150);
@@ -346,9 +317,9 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
 
         if (currentCharacterData != null) {
             lblCharacterName.setText("Nombre: " + (currentCharacterData.get("nombre_personaje").isJsonNull() ? "Sin Nombre" : currentCharacterData.get("nombre_personaje").getAsString()));
-            lblLevel.setText("Nivel: " + (currentCharacterData.has("nivel") && !currentCharacterData.get("nivel").isJsonNull() ? currentCharacterData.get("nivel").getAsInt() : "N/A"));
-            lblHealth.setText("Vida: " + (currentCharacterData.has("vida_actual") && !currentCharacterData.get("vida_actual").isJsonNull() ? currentCharacterData.get("vida_actual").getAsInt() : "N/A")); // ¡MODIFICADO!
-            lblEnergy.setText("Energía: " + (currentCharacterData.has("energia") && !currentCharacterData.get("energia").isJsonNull() ? currentCharacterData.get("energia").getAsInt() : "N/A")); // ¡MODIFICADO!
+            lblLevel.setText("Nivel: " + currentCharacterData.get("nivel").getAsInt());
+            lblHealth.setText("Vida: " + currentCharacterData.get("vida_actual").getAsInt());
+            lblEnergy.setText("Energía: " + currentCharacterData.get("energia").getAsInt());
             // La foto de perfil ya no se carga desde currentCharacterData
         } else {
             lblCharacterName.setText("Nombre: N/A");
@@ -356,8 +327,6 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
             lblHealth.setText("Vida: N/A");
             lblEnergy.setText("Energía: N/A");
         }
-        revalidate(); // Asegura que los cambios en los JLabels se reflejen
-        repaint(); // Asegura que se redibuje el panel
     }
     
     // --- Lógica de Interacción con el Usuario ---
@@ -424,8 +393,7 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
                 // Llama al nuevo método del ApiClient para actualizar la foto del usuario
-                // ¡MODIFICADO! Usar la instancia de apiClient
-                return apiClient.updateUserProfilePicture(userId, newPhotoUrl); 
+                return ApiClient.updateUserProfilePicture(userId, newPhotoUrl);
             }
 
             @Override
@@ -447,7 +415,7 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
 
     private void editCharacterName() {
         String currentName = currentCharacterData != null && currentCharacterData.has("nombre_personaje") && !currentCharacterData.get("nombre_personaje").isJsonNull()
-                                     ? currentCharacterData.get("nombre_personaje").getAsString() : "";
+                                        ? currentCharacterData.get("nombre_personaje").getAsString() : "";
         
         JTextField nameField = new JTextField(currentName);
         
@@ -481,8 +449,7 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
                     protected ApiClient.ApiResponse doInBackground() throws Exception {
                         JsonObject updateData = new JsonObject();
                         updateData.addProperty("nombre_personaje", newName.trim());
-                        // ¡MODIFICADO! Usar la instancia de apiClient
-                        return apiClient.updateCharacterProfile(characterId, updateData);
+                        return ApiClient.updateCharacterProfile(characterId, updateData);
                     }
 
                     @Override
@@ -514,8 +481,7 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         new SwingWorker<ApiClient.ApiResponse, Void>() {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
-                // ¡MODIFICADO! Usar la instancia de apiClient
-                return apiClient.updateCharacterProfile(characterId, currentCharacterData);
+                return ApiClient.updateCharacterProfile(characterId, currentCharacterData);
             }
 
             @Override
@@ -551,8 +517,7 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
             new SwingWorker<ApiClient.ApiResponse, Void>() {
                 @Override
                 protected ApiClient.ApiResponse doInBackground() throws Exception {
-                    // ¡MODIFICADO! Usar la instancia de apiClient
-                    return apiClient.addItemToInventory(characterId, itemId, quantity);
+                    return ApiClient.addItemToInventory(characterId, itemId, quantity);
                 }
 
                 @Override
@@ -583,8 +548,7 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         new SwingWorker<ApiClient.ApiResponse, Void>() {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
-                // ¡MODIFICADO! Usar la instancia de apiClient
-                return apiClient.getCharacterInventory(characterId);
+                return ApiClient.getCharacterInventory(characterId);
             }
             @Override
             protected void done() {
@@ -616,8 +580,7 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         new SwingWorker<ApiClient.ApiResponse, Void>() {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
-                // ¡MODIFICADO! Usar la instancia de apiClient
-                return apiClient.getEnemiesDefeated(characterId);
+                return ApiClient.getEnemiesDefeated(characterId);
             }
             @Override
             protected void done() {
@@ -675,19 +638,26 @@ public class PanelProfileAndInventory extends javax.swing.JPanel {
         } catch (IOException e) {
             System.err.println("Error de E/S al cargar imagen " + imageUrl + ": " + e.getMessage());
             targetLabel.setIcon(null); // En caso de error, no mostrar icono
+            e.printStackTrace(); // Imprime el stack trace para depuración
+        } catch (Exception e) {
+            System.err.println("Error inesperado al cargar imagen " + imageUrl + ": " + e.getMessage());
+            targetLabel.setIcon(null);
             e.printStackTrace();
         }
     }
 
-    // Método para añadir un listener al botón "Volver al Menú"
-    public void addBackToMainMenuListener(ActionListener listener) {
-        this.backToMenuListener = listener;
-    }
-
-    // Método para añadir un listener al botón "Cerrar Sesión"
+    // Método para que LoginBase/ViewSystem pueda añadir un listener al botón de Logout
     public void addLogoutActionListener(ActionListener listener) {
-        this.logoutActionListener = listener;
+        btnLogout.addActionListener(listener);
     }
 
+    // Método para añadir un listener al botón "Volver al Menú Principal"
+    public void addBackToMainMenuListener(ActionListener listener) {
+        if (btnBackToMainMenu != null) {
+            btnBackToMainMenu.addActionListener(listener);
+        } else {
+            System.err.println("Advertencia: btnBackToMainMenu no está inicializado en PanelProfileAndInventory.");
+        }
+    }
 }
 
