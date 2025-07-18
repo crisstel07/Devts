@@ -5,7 +5,11 @@ import devt.login.components.Message;
 import devt.login.components.PanelLoading;
 import devt.login.components.PanelLoginAndRegister;
 import devt.login.components.PanelVerifyCode;
-import devt.login.components.PanelCover; 
+import devt.login.components.PanelCover;
+import devt.login.components.PanelForgotPassword;
+import devt.login.view.PanelCharacterCreation;
+import devt.login.view.PanelProfileAndInventory;
+import devt.login.view.SplashScreen;
 
 // Librerias de Java de AWT Y Swing
 import java.awt.Graphics;
@@ -22,7 +26,7 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.util.HashMap;
 import java.util.Map;
-import java.net.URL; 
+import java.net.URL;
 
 // Gson (para JSON)
 import com.google.gson.JsonObject;
@@ -34,42 +38,60 @@ import devt.login.apiFlask.ApiClient;
 import devt.login.apiFlask.ApiClient.ApiResponse;
 
 // Importaciones de tus paneles personalizados
-import devt.login.components.AlphaOverlayPanel; 
+import devt.login.components.AlphaOverlayPanel;
 import org.jdesktop.animation.timing.*;
 import org.jdesktop.animation.timing.interpolation.PropertySetter;
 
 // Importar la clase de tu juego (ahora será un JPanel)
-import Main.VentanaJuego; 
+import Main.VentanaJuego;
+import Sonido.Musica;
+import devt.login.view.ViewSystem;
 
 
 public class LoginBase extends javax.swing.JFrame {
 
-    private FondoPanel fondo; 
+    private Musica musicaFondoLogin;
+
+    private FondoPanel fondo;
     private MigLayout layout;
     private PanelCover cover;
     private PanelLoading loading;
     private PanelVerifyCode verifyCode;
-    private Integer currentRegisteredUserId; 
+    private Integer currentRegisteredUserId;
 
     private PanelLoginAndRegister loginAndRegister;
     private Animator animator;
-    private boolean isLogin = true; // true = panel derecho muestra Login, false = panel derecho muestra Register
+    private boolean isLogin = true;
     private final double addSize = 30;
     private final double coverSize = 45;
     private final double loginSize = 55;
     private final DecimalFormat df = new DecimalFormat("##0.###", DecimalFormatSymbols.getInstance(Locale.US));
 
-    private JsonObject loggedInUserData; 
-    private JsonObject currentCharacterData; 
-    private PanelProfileAndInventory panelProfileAndInventory; 
-    private PanelCharacterCreation panelCharacterCreation; 
-    private ViewSystem mainMenuPanel; // Instancia del panel del menú principal
-    private VentanaJuego gamePanel; // Nueva instancia para el panel del juego
+    private JsonObject loggedInUserData;
+    private JsonObject currentCharacterData;
+    private PanelProfileAndInventory panelProfileAndInventory;
+    private PanelCharacterCreation panelCharacterCreation;
+    private ViewSystem mainMenuPanel;
+    private VentanaJuego gamePanel;
 
-    private AlphaOverlayPanel overlayPanel; 
+    private AlphaOverlayPanel overlayPanel;
+
+    private PanelForgotPassword forgotPasswordPanel;
+
+    // Instancia única para mostrar mensajes (Esta línea estaba en tu código, la mantengo)
+    private Message messagePanelInstance;
 
     public LoginBase() {
-        // Inicialización de ActionListeners (necesarios para PanelLoginAndRegister)
+        try {
+            musicaFondoLogin = new Musica("/Sonido/music.wav");
+            musicaFondoLogin.reproducirEnLoop();
+            musicaFondoLogin.setVolumen(-15.0f);
+            System.out.println("Música de fondo del login iniciada.");
+        } catch (Exception e) {
+            System.err.println("Error al iniciar la música de fondo del login: " + e.getMessage());
+            e.printStackTrace();
+        }
+
         ActionListener eventRegister = new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -82,57 +104,73 @@ public class LoginBase extends javax.swing.JFrame {
                 login();
             }
         };
+        ActionListener eventForgotPassword = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                showForgotPasswordPanel();
+            }
+        };
 
-        // 1. Inicializa loginAndRegister PRIMERO
-        loginAndRegister = new PanelLoginAndRegister(eventRegister, eventLogin);
+        loginAndRegister = new PanelLoginAndRegister(eventRegister, eventLogin, eventForgotPassword);
 
-        initComponents(); 
+        initComponents();
 
-        // Configuración de la ventana principal (LoginBase es el JFrame)
         this.setSize(1365, 767);
         this.setLocationRelativeTo(null);
         this.setResizable(false);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setTitle("Juego RPG - Login"); 
+        this.setTitle("VEILWALKER - Login");
 
-        // Creación y configuración del Fondo del panel.
-        fondo = new FondoPanel(); 
+        fondo = new FondoPanel();
         layout = new MigLayout("fill, insets 0");
         fondo.setLayout(layout);
-        
-        // --- Gestión de Paneles con JLayeredPane ---
+
         this.getLayeredPane().add(fondo, JLayeredPane.DEFAULT_LAYER);
-        fondo.setBounds(0, 0, this.getWidth(), this.getHeight()); 
+        fondo.setBounds(0, 0, this.getWidth(), this.getHeight());
 
-        cover = new PanelCover(); 
-        fondo.add(cover, "width 45%, pos 0al 0 n 100%");
-        fondo.add(loginAndRegister, "width 55%, pos 1al 0 n 100%");
+        cover = new PanelCover();
 
-        // --- Inicialización de overlayPanel, loading, verifyCode en POPUP_LAYER ---
-        overlayPanel = new AlphaOverlayPanel(); 
-        overlayPanel.setVisible(false); 
+        fondo.add(cover, "width " + coverSize + "%, pos " + (isLogin ? "1al" : "0al") + " 0 n 100%");
+        fondo.add(loginAndRegister, "width " + loginSize + "%, pos " + (isLogin ? "0al" : "1al") + " 0 n 100%");
+        loginAndRegister.showLogin(isLogin);
+        cover.login(isLogin);
+
+        overlayPanel = new AlphaOverlayPanel();
+        overlayPanel.setVisible(false);
         this.getLayeredPane().add(overlayPanel, JLayeredPane.POPUP_LAYER);
         overlayPanel.setBounds(0, 0, this.getWidth(), this.getHeight());
 
         loading = new PanelLoading();
-        verifyCode = new PanelVerifyCode(); 
+        verifyCode = new PanelVerifyCode();
+        forgotPasswordPanel = new PanelForgotPassword();
+
         this.getLayeredPane().add(loading, JLayeredPane.POPUP_LAYER);
         this.getLayeredPane().add(verifyCode, JLayeredPane.POPUP_LAYER);
+        this.getLayeredPane().add(forgotPasswordPanel, JLayeredPane.POPUP_LAYER);
+
         loading.setBounds(0, 0, this.getWidth(), this.getHeight());
         verifyCode.setBounds(0, 0, this.getWidth(), this.getHeight());
+        forgotPasswordPanel.setBounds(0, 0, this.getWidth(), this.getHeight());
+
         loading.setVisible(false);
         verifyCode.setVisible(false);
-        // --- Fin inicialización de paneles superpuestos ---
+        forgotPasswordPanel.setVisible(false);
 
-        init(); 
-        
-        // Listener para redimensionamiento de ventana para ajustar los paneles superpuestos
+        // Inicializar la instancia única del panel de mensajes
+        messagePanelInstance = new Message();
+
+        init();
+
         addComponentListener(new java.awt.event.ComponentAdapter() {
             public void componentResized(java.awt.event.ComponentEvent evt) {
                 fondo.setBounds(0, 0, getWidth(), getHeight());
                 loading.setBounds(0, 0, getWidth(), getHeight());
                 verifyCode.setBounds(0, 0, getWidth(), getHeight());
+                forgotPasswordPanel.setBounds(0, 0, getWidth(), getHeight());
                 overlayPanel.setBounds(0, 0, getWidth(), getHeight());
+                if (messagePanelInstance.isVisible()) {
+                    messagePanelInstance.setBounds((getWidth() - messagePanelInstance.getPreferredSize().width) / 2, 10, messagePanelInstance.getPreferredSize().width, messagePanelInstance.getPreferredSize().height);
+                }
                 if (mainMenuPanel != null) {
                     mainMenuPanel.setBounds(0, 0, getWidth(), getHeight());
                 }
@@ -142,25 +180,52 @@ public class LoginBase extends javax.swing.JFrame {
                 if (panelCharacterCreation != null) {
                     panelCharacterCreation.setBounds(0, 0, getWidth(), getHeight());
                 }
-                if (gamePanel != null) { // Asegurarse de que el panel del juego también se redimensione
+                if (gamePanel != null) {
                     gamePanel.setBounds(0, 0, getWidth(), getHeight());
                 }
             }
         });
     }
 
-    // Método que contiene toda la lógica de animación y el listener del botón.
     private void init() {
         cover.addEvent(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent ae) {
-                if (!animator.isRunning()) { 
+                if (!animator.isRunning()) {
                     animator.start();
                 }
             }
         });
 
-        // Inicializar animador
+        forgotPasswordPanel.addEventOK(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ae) {
+                System.out.println("PanelForgotPassword: Botón OK presionado. isShowingEmailInput: " + forgotPasswordPanel.isShowingEmailInput());
+                if (forgotPasswordPanel.isShowingEmailInput()) {
+                    requestPasswordResetCode();
+                } else {
+                    resetPasswordWithCode();
+                }
+            }
+        });
+
+        forgotPasswordPanel.addEventCancel(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ae) {
+                System.out.println("PanelForgotPassword: Botón CANCELAR presionado.");
+                forgotPasswordPanel.setVisible(false);
+                overlayPanel.setVisible(false);
+                fondo.setVisible(true);
+                loginAndRegister.setVisible(true);
+                cover.setVisible(true);
+                setTitle("VEILWALKER - Login");
+                revalidate();
+                repaint();
+                forgotPasswordPanel.showEmailInput();
+            }
+        });
+
+        // TU CÓDIGO ORIGINAL DE ANIMACIÓN - NO MODIFICADO
         animator = new Animator(800, new TimingTargetAdapter() {
             @Override
             public void timingEvent(float fraction) {
@@ -168,180 +233,203 @@ public class LoginBase extends javax.swing.JFrame {
                 double fractionLogin;
                 double size = coverSize;
 
-                if (isLogin) { 
-                    fractionCover = 1f - fraction;
-                    fractionLogin = fraction;
-                    if (fraction <= 0.5f) {
-                        size += fraction * addSize;
-                    } else {
-                        size += addSize - fraction * addSize;
-                    }
-                    cover.registerLeft(fraction); 
-                } else { 
-                    fractionCover = fraction;
-                    fractionLogin = 1f - fraction;
-                    if (fraction <= 0.5f) {
-                        size += fraction * addSize;
-                    } else {
-                        size += addSize - fraction * addSize;
-                    }
-                    cover.loginRight(fraction); 
-                }
-                
-                if (fraction >= 0.5f && fraction - 0.01f < 0.5f) { 
-                    loginAndRegister.showLogin(!isLogin); 
+                if (fraction <= 0.5f) {
+                    size += fraction * addSize;
+                } else {
+                    size += addSize - fraction * addSize;
                 }
 
-                layout.setComponentConstraints(cover, "width " + df.format(size) + "%, pos " + df.format(fractionCover) + "al 0 n 100%");
-                layout.setComponentConstraints(loginAndRegister, "width " + df.format(loginSize) + "%, pos " + df.format(fractionLogin) + "al 0 n 100%");
-                fondo.revalidate(); 
+                if (isLogin) {
+                    fractionCover = 1f - fraction;
+                    fractionLogin = fraction;
+
+                    if (fraction >= 0.5f) {
+                        cover.registerRight(fractionCover * 100);
+                    } else {
+                        cover.loginRight(fractionLogin * 100);
+                    }
+                } else {
+                    fractionCover = fraction;
+                    fractionLogin = 1f - fraction;
+
+                    if (fraction <= 0.5f) {
+                        cover.registerLeft(fraction * 100);
+                    } else {
+                        cover.loginLeft((1f - fraction) * 100);
+                    }
+                }
+
+                fractionCover = Double.valueOf(df.format(fractionCover));
+                fractionLogin = Double.valueOf(df.format(fractionLogin));
+
+                if (fraction >= 0.5f) {
+                    loginAndRegister.showLogin(!isLogin);
+                }
+
+                layout.setComponentConstraints(cover, "width " + df.format(size) + "%, pos " + fractionCover + "al 0 n 100%");
+                layout.setComponentConstraints(loginAndRegister, "width " + df.format(loginSize) + "%, pos " + fractionLogin + "al 0 n 100%");
+
+                fondo.revalidate();
             }
 
             @Override
             public void end() {
-                isLogin = !isLogin; 
-                if (isLogin) { 
-                    cover.loginRight(1); 
-                } else { 
-                    cover.registerLeft(1); 
-                }
-                fondo.revalidate(); 
-                fondo.repaint(); 
+                isLogin = !isLogin;
+                layout.setComponentConstraints(cover, "width " + df.format(coverSize) + "%, pos " + (isLogin ? "1al" : "0al") + " 0 n 100%");
+                layout.setComponentConstraints(loginAndRegister, "width " + df.format(loginSize) + "%, pos " + (isLogin ? "0al" : "1al") + " 0 n 100%");
+                fondo.revalidate();
+                fondo.repaint();
             }
         });
         animator.setAcceleration(0.5f);
         animator.setDeceleration(0.5f);
-        animator.setResolution(0); 
-        
-        // Listener para el botón OK del panel de verificación de código
+        animator.setResolution(0);
+
         verifyCode.addEventButtonOK(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent ae) {
-                String email = verifyCode.getEmail(); 
+                String email = verifyCode.getEmail();
                 String inputCode = verifyCode.getInputCode();
-                
+
                 if (email == null || email.isEmpty() || inputCode.isEmpty()) {
                     showMessage(Message.MessageType.ERROR, "Ingresa el correo y el código de verificación.");
                     return;
                 }
 
-                loading.setVisible(true); 
-                overlayPanel.setVisible(true); 
+                loading.setVisible(true);
+                overlayPanel.setVisible(true);
 
                 new SwingWorker<ApiClient.ApiResponse, Void>() {
                     @Override
                     protected ApiClient.ApiResponse doInBackground() throws Exception {
+                        System.out.println("SwingWorker (verifyCode): Llamando a ApiClient.verifyUser...");
                         return ApiClient.verifyUser(email, inputCode);
                     }
 
                     @Override
-                            protected void done() {
-                                loading.setVisible(false); 
-                                try {
-                                    ApiClient.ApiResponse result = get();
-                                    if (result.isSuccess()) {
-                                        showMessage(Message.MessageType.SUCCESS, result.getMessage());
-                                        verifyCode.setVisible(false); 
-                                        verifyCode.clearFields(); 
+                    protected void done() {
+                        loading.setVisible(false);
+                        try {
+                            ApiClient.ApiResponse result = get();
+                            System.out.println("SwingWorker (verifyCode) done. Success: " + result.isSuccess() + ", Message: " + result.getMessage() + ", ErrorCode: " + result.getErrorCode());
+                            if (result.isSuccess()) {
+                                showMessage(Message.MessageType.SUCCESS, result.getMessage());
+                                verifyCode.setVisible(false);
+                                verifyCode.clearFields();
+                                overlayPanel.setVisible(false);
+                                loginAndRegister.showLogin(true);
+                                isLogin = true;
+                                cover.login(isLogin);
 
-                                        loginAndRegister.showLogin(true);
-                                        cover.login(true); 
-                                        isLogin = true;
-
-                                    } else {
-                                        overlayPanel.setVisible(false);
-                                        showMessage(Message.MessageType.ERROR, result.getMessage());
-                                    }
-                                } catch (Exception ex) {
-                                    overlayPanel.setVisible(false);
-                                    ex.printStackTrace();
-                                    showMessage(Message.MessageType.ERROR, "Error al procesar la verificación: " + ex.getMessage());
-                                }
+                            } else {
+                                overlayPanel.setVisible(false);
+                                showMessage(Message.MessageType.ERROR, result.getMessage());
                             }
+                        } catch (Exception ex) {
+                            overlayPanel.setVisible(false);
+                            ex.printStackTrace();
+                            showMessage(Message.MessageType.ERROR, "Error al procesar la verificación: " + ex.getMessage());
+                        }
+                    }
                 }.execute();
             }
         });
     }
 
     private void register() {
-        String username = loginAndRegister.getRegisterUsername(); 
-        String email = loginAndRegister.getRegisterEmail(); 
-        String password = loginAndRegister.getRegisterPassword(); 
+        String username = loginAndRegister.getRegisterUsername();
+        String email = loginAndRegister.getRegisterEmail();
+        String password = loginAndRegister.getRegisterPassword();
 
         if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
             showMessage(Message.MessageType.ERROR, "Por favor, llena todos los campos de registro.");
             return;
         }
 
-        loading.setVisible(true); 
-        overlayPanel.setVisible(true); 
+        loading.setVisible(true);
+        overlayPanel.setVisible(true);
 
         new SwingWorker<ApiClient.ApiResponse, Void>() {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
+                System.out.println("SwingWorker (register): Llamando a ApiClient.registerUser...");
                 return ApiClient.registerUser(username, email, password);
             }
 
             @Override
             protected void done() {
-                loading.setVisible(false); 
+                loading.setVisible(false);
                 try {
                     ApiClient.ApiResponse result = get();
+                    System.out.println("SwingWorker (register) done. Success: " + result.isSuccess() + ", Message: " + result.getMessage() + ", ErrorCode: " + result.getErrorCode());
                     if (result.isSuccess()) {
                         showMessage(Message.MessageType.SUCCESS, result.getMessage());
-                        verifyCode.setEmail(email); 
-                        verifyCode.setVisible(true); 
-                        loginAndRegister.clearFields(); 
+                        verifyCode.setEmail(email);
+                        verifyCode.setVisible(true);
+                        loginAndRegister.clearFields();
                     } else {
-                        overlayPanel.setVisible(false); 
-                        showMessage(Message.MessageType.ERROR, result.getMessage());
+                        overlayPanel.setVisible(false);
+                        String userMessage = result.getMessage();
+                        if (result.getErrorCode() == 409) {
+                            userMessage = "Este correo electrónico ya está registrado.";
+                        }
+                        showMessage(Message.MessageType.ERROR, userMessage);
                     }
                 } catch (Exception ex) {
-                    overlayPanel.setVisible(false); 
+                    overlayPanel.setVisible(false);
                     ex.printStackTrace();
                     showMessage(Message.MessageType.ERROR, "Error inesperado al registrar: " + ex.getMessage());
                 }
             }
         }.execute();
-    }        
+    }
 
     private void login() {
-        String email = loginAndRegister.getLoginEmail(); 
-        String password = loginAndRegister.getLoginPassword(); 
+        String email = loginAndRegister.getLoginEmail();
+        String password = loginAndRegister.getLoginPassword();
 
         if (email.isEmpty() || password.isEmpty()) {
             showMessage(Message.MessageType.ERROR, "Por favor, ingresa tu correo y contraseña.");
             return;
         }
 
-        loading.setVisible(true); 
-        overlayPanel.setVisible(true); 
+        loading.setVisible(true);
+        overlayPanel.setVisible(true);
 
         new SwingWorker<ApiClient.ApiResponse, Void>() {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
+                System.out.println("SwingWorker (login): Llamando a ApiClient.loginUser...");
                 return ApiClient.loginUser(email, password);
             }
 
             @Override
             protected void done() {
-                loading.setVisible(false); 
+                loading.setVisible(false);
                 try {
                     ApiClient.ApiResponse result = get();
+                    System.out.println("SwingWorker (login) done. Success: " + result.isSuccess() + ", Message: " + result.getMessage() + ", ErrorCode: " + result.getErrorCode());
                     if (result.isSuccess()) {
                         showMessage(Message.MessageType.SUCCESS, result.getMessage());
-                        loggedInUserData = result.getDataAsJsonObject(); 
+                        loggedInUserData = result.getDataAsJsonObject();
 
-                        loginAndRegister.clearFields(); 
+                        loginAndRegister.clearFields();
+                        overlayPanel.setVisible(false);
 
                         loadOrCreateCharacter();
 
                     } else {
-                        overlayPanel.setVisible(false); 
-                        showMessage(Message.MessageType.ERROR, result.getMessage());
+                        overlayPanel.setVisible(false);
+                        String userMessage = result.getMessage();
+                        if (result.getErrorCode() == 401) {
+                            userMessage = "Credenciales inválidas (correo o contraseña incorrectos).";
+                        } else if (result.getErrorCode() == 404) {
+                            userMessage = "Usuario no encontrado. Por favor, regístrate.";
+                        }
+                        showMessage(Message.MessageType.ERROR, userMessage);
                     }
                 } catch (Exception ex) {
-                    overlayPanel.setVisible(false); 
+                    overlayPanel.setVisible(false);
                     ex.printStackTrace();
                     showMessage(Message.MessageType.ERROR, "Error inesperado al iniciar sesión: " + ex.getMessage());
                 }
@@ -351,53 +439,55 @@ public class LoginBase extends javax.swing.JFrame {
 
     private void loadOrCreateCharacter() {
         if (loggedInUserData == null || !loggedInUserData.has("id") || loggedInUserData.get("id").isJsonNull()) {
-            showMessage(Message.MessageType.ERROR, "Error: No se pudo obtener el ID del usuario logueado para cargar personaje.");
+            showMessage(Message.MessageType.ERROR, "Error: Datos de usuario no disponibles para cargar personaje.");
             performLogout();
             return;
         }
-        int userId = loggedInUserData.get("id").getAsInt(); 
+        int userId = loggedInUserData.get("id").getAsInt();
 
-        loading.setVisible(true); 
-        overlayPanel.setVisible(true); 
+        loading.setVisible(true);
+        overlayPanel.setVisible(true);
 
         new SwingWorker<ApiClient.ApiResponse, Void>() {
             @Override
             protected ApiClient.ApiResponse doInBackground() throws Exception {
+                System.out.println("SwingWorker (loadOrCreateCharacter): Llamando a ApiClient.getOrCreateCharacterProfile...");
                 return ApiClient.getOrCreateCharacterProfile(userId);
             }
 
             @Override
             protected void done() {
-                loading.setVisible(false); 
+                loading.setVisible(false);
                 try {
                     ApiClient.ApiResponse result = get();
+                    System.out.println("SwingWorker (loadOrCreateCharacter) done. Success: " + result.isSuccess() + ", Message: " + result.getMessage() + ", ErrorCode: " + result.getErrorCode());
                     if (result.isSuccess()) {
-                        currentCharacterData = result.getDataAsJsonObject(); 
+                        currentCharacterData = result.getDataAsJsonObject();
                         if (currentCharacterData != null) {
                             String characterName = currentCharacterData.has("nombre_personaje") && !currentCharacterData.get("nombre_personaje").isJsonNull()
-                                ? currentCharacterData.get("nombre_personaje").getAsString() : null;
+                                    ? currentCharacterData.get("nombre_personaje").getAsString() : null;
 
-                            if (characterName == null || characterName.trim().isEmpty() || characterName.equals("None")) { 
+                            if (characterName == null || characterName.trim().isEmpty() || characterName.equals("None")) {
                                 showMessage(Message.MessageType.INFO, "No tienes un personaje. ¡Crea uno ahora!");
-                                showCharacterCreationScreen(); 
+                                showCharacterCreationScreen();
                             } else {
                                 showMessage(Message.MessageType.INFO, "Personaje cargado: " + characterName);
-                                showMainMenu(); 
+                                showMainMenu();
                             }
                         } else {
                             showMessage(Message.MessageType.ERROR, "Error: Datos de personaje nulos en la respuesta.");
                             performLogout();
                         }
-                    } else if (result.getErrorCode() == 404) { 
-                         showMessage(Message.MessageType.INFO, "No tienes un personaje. ¡Crea uno ahora!");
-                         showCharacterCreationScreen();
+                    } else if (result.getErrorCode() == 404) {
+                        showMessage(Message.MessageType.INFO, "No tienes un personaje. ¡Crea uno ahora!");
+                        showCharacterCreationScreen();
                     } else {
-                        overlayPanel.setVisible(false); 
+                        overlayPanel.setVisible(false);
                         showMessage(Message.MessageType.ERROR, "Error al verificar personaje: " + result.getMessage());
-                        performLogout(); 
+                        performLogout();
                     }
                 } catch (Exception ex) {
-                    overlayPanel.setVisible(false); 
+                    overlayPanel.setVisible(false);
                     ex.printStackTrace();
                     showMessage(Message.MessageType.ERROR, "Error inesperado al cargar/crear personaje: " + ex.getMessage());
                     performLogout();
@@ -413,94 +503,112 @@ public class LoginBase extends javax.swing.JFrame {
             return;
         }
         int userId = loggedInUserData.get("id").getAsInt();
-        
-        fondo.setVisible(false); 
-        
+
+        fondo.setVisible(false);
+        loading.setVisible(false);
+        verifyCode.setVisible(false);
+        overlayPanel.setVisible(false);
+        if (forgotPasswordPanel != null) {
+            forgotPasswordPanel.setVisible(false);
+        }
         if (panelCharacterCreation == null) {
-            panelCharacterCreation = new PanelCharacterCreation(userId); 
+            panelCharacterCreation = new devt.login.view.PanelCharacterCreation(userId, new PanelCharacterCreation.MessageDisplayCallback() {
+                @Override
+                public void showMessage(Message.MessageType type, String message) {
+                    LoginBase.this.showMessage(type, message);
+                }
+            });
+
             panelCharacterCreation.addCharacterCreatedListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    loadOrCreateCharacter(); 
+                    loadOrCreateCharacter();
+                }
+            });
+            panelCharacterCreation.addBackToLoginListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    performLogout();
                 }
             });
             this.getLayeredPane().add(panelCharacterCreation, JLayeredPane.DEFAULT_LAYER);
             panelCharacterCreation.setBounds(0, 0, getWidth(), getHeight());
         } else {
-            panelCharacterCreation.setUserId(userId); 
+            panelCharacterCreation.setUserId(userId);
+            panelCharacterCreation.setMessageCallback(new PanelCharacterCreation.MessageDisplayCallback() {
+                @Override
+                public void showMessage(Message.MessageType type, String message) {
+                    LoginBase.this.showMessage(type, message);
+                }
+            });
         }
 
-        panelCharacterCreation.setVisible(true); 
-        setTitle("JVEILWALKER - Crea tu Personaje");
-        revalidate(); 
-        repaint(); 
+        panelCharacterCreation.setVisible(true);
+        setTitle("VEILWALKER - Crea tu Personaje");
+        revalidate();
+        repaint();
     }
 
     private void showMainMenu() {
-        fondo.setVisible(false); 
+        fondo.setVisible(false);
+
         if (panelCharacterCreation != null) {
             panelCharacterCreation.setVisible(false);
         }
         if (panelProfileAndInventory != null) {
             panelProfileAndInventory.setVisible(false);
         }
-        if (gamePanel != null) { // Asegurarse de ocultar el panel del juego si está visible
+        if (gamePanel != null) {
             gamePanel.setVisible(false);
         }
-
+        overlayPanel.setVisible(false);
+        if (forgotPasswordPanel != null) {
+            forgotPasswordPanel.setVisible(false);
+        }
         if (mainMenuPanel == null) {
-            mainMenuPanel = new ViewSystem(loggedInUserData, currentCharacterData);
-            
-            // AÑADIR LISTENER AL BOTÓN "JUGAR" DE ViewSystem
-            mainMenuPanel.addPlayButtonListener(new ActionListener() { 
+            mainMenuPanel = new devt.login.view.ViewSystem(loggedInUserData, currentCharacterData);
+
+            mainMenuPanel.addPlayButtonListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    // 1. Iniciar fundido a negro
-                    overlayPanel.setVisible(true); 
-                    Animator fadeToBlackAnimator = new Animator(500, new TimingTargetAdapter() { 
+                    overlayPanel.setVisible(true);
+                    Animator fadeToBlackAnimator = new Animator(500, new TimingTargetAdapter() {
                         @Override
                         public void timingEvent(float fraction) {
-                            overlayPanel.setAlpha(fraction); 
+                            overlayPanel.setAlpha(fraction);
                         }
 
                         @Override
                         public void end() {
-                            // Cuando el fundido a negro ha terminado
                             SwingUtilities.invokeLater(() -> {
-                                mainMenuPanel.setVisible(false); 
-                                LoginBase.this.setTitle("Cargando Juego..."); 
+                                mainMenuPanel.setVisible(false);
+                                LoginBase.this.setTitle("Cargando Juego...");
+                                showMessage(Message.MessageType.INFO, "Cargando juego...");
 
-                                // 2. Mostrar la SplashScreen
                                 SplashScreen splash = new SplashScreen();
                                 splash.startSplash(() -> {
-                                    // Este código se ejecuta cuando la SplashScreen ha terminado y se ha cerrado
                                     SwingUtilities.invokeLater(() -> {
-                                        // 3. Iniciar fundido de negro a transparente
-                                        Animator fadeFromBlackAnimator = new Animator(500, new TimingTargetAdapter() { 
+                                        Animator fadeFromBlackAnimator = new Animator(500, new TimingTargetAdapter() {
                                             @Override
                                             public void timingEvent(float fraction) {
-                                                overlayPanel.setAlpha(1.0f - fraction); 
+                                                overlayPanel.setAlpha(1.0f - fraction);
                                             }
 
                                             @Override
                                             public void end() {
-                                                // Cuando el fundido de salida ha terminado
                                                 SwingUtilities.invokeLater(() -> {
-                                                    overlayPanel.setVisible(false); // Ocultar el overlay
-                                                    
-                                                    // *** AQUÍ ES DONDE SE INICIA VentanaJuego (ahora como JPanel) ***
-                                                    // LoginBase.this.dispose(); // YA NO SE CIERRA EL JFrame PRINCIPAL
-                                                    
+                                                    overlayPanel.setVisible(false);
+
                                                     if (gamePanel == null) {
-                                                        gamePanel = new VentanaJuego();
-                                                        // Añadir el panel del juego al JLayeredPane en la capa DEFAULT
+                                                        gamePanel = new Main.VentanaJuego();
                                                         LoginBase.this.getLayeredPane().add(gamePanel, JLayeredPane.DEFAULT_LAYER);
                                                         gamePanel.setBounds(0, 0, LoginBase.this.getWidth(), LoginBase.this.getHeight());
                                                     }
-                                                    gamePanel.setVisible(true); // Hacer visible el panel del juego
-                                                    gamePanel.startGame(); // Inicia la lógica interna del juego y pide enfoque
-                                                    
-                                                    LoginBase.this.setTitle(VentanaJuego.titulo); // Establecer el título del juego
+                                                    gamePanel.setVisible(true);
+                                                    gamePanel.startGame();
+                                                    showMessage(Message.MessageType.SUCCESS, "¡Juego iniciado!");
+
+                                                    LoginBase.this.setTitle(Main.VentanaJuego.titulo);
                                                     LoginBase.this.revalidate();
                                                     LoginBase.this.repaint();
                                                 });
@@ -522,7 +630,7 @@ public class LoginBase extends javax.swing.JFrame {
                 }
             });
 
-            mainMenuPanel.addShowProfileListener(new ActionListener() { 
+            mainMenuPanel.addShowProfileListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     showProfileScreen();
@@ -548,12 +656,12 @@ public class LoginBase extends javax.swing.JFrame {
             mainMenuPanel.updateCharacterData(currentCharacterData);
         }
 
-        mainMenuPanel.setVisible(true); 
-        setTitle("VEILKALWER - Menú Principal");
+        mainMenuPanel.setVisible(true);
+        setTitle("VEILWALKER - Menú Principal");
         revalidate();
         repaint();
     }
-        
+
     private void showProfileScreen() {
         if (loggedInUserData == null || !loggedInUserData.has("id") || loggedInUserData.get("id").isJsonNull() || currentCharacterData == null || !currentCharacterData.has("id") || currentCharacterData.get("id").isJsonNull()) {
             showMessage(Message.MessageType.ERROR, "Datos de usuario o personaje no disponibles para el perfil.");
@@ -564,85 +672,221 @@ public class LoginBase extends javax.swing.JFrame {
         if (mainMenuPanel != null) {
             mainMenuPanel.setVisible(false);
         }
-        if (gamePanel != null) { // Asegurarse de ocultar el panel del juego si está visible
+        if (gamePanel != null) {
             gamePanel.setVisible(false);
         }
-
+        if (panelCharacterCreation != null) {
+            panelCharacterCreation.setVisible(false);
+        }
+        overlayPanel.setVisible(false);
+        if (forgotPasswordPanel != null) {
+            forgotPasswordPanel.setVisible(false);
+        }
         if (panelProfileAndInventory == null) {
-            panelProfileAndInventory = new PanelProfileAndInventory(loggedInUserData); 
-            
-            panelProfileAndInventory.addBackToMainMenuListener(new ActionListener() { 
+            panelProfileAndInventory = new devt.login.view.PanelProfileAndInventory(loggedInUserData);
+
+            panelProfileAndInventory.addBackToMainMenuListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    showMainMenu(); 
+                    showMainMenu();
                 }
             });
-            
+
             panelProfileAndInventory.addLogoutActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    performLogout(); 
+                    performLogout();
                 }
             });
 
             this.getLayeredPane().add(panelProfileAndInventory, JLayeredPane.DEFAULT_LAYER);
             panelProfileAndInventory.setBounds(0, 0, getWidth(), getHeight());
         }
-        
-        panelProfileAndInventory.loadData(this.currentCharacterData); 
+
+        panelProfileAndInventory.loadData(this.currentCharacterData);
 
         panelProfileAndInventory.setVisible(true);
-        setTitle("VEILWALWER - Perfil e Inventario");
+        setTitle("VEILWALKER - Perfil e Inventario");
         revalidate();
         repaint();
     }
 
+    // ¡NUEVO! Método para mostrar el panel de olvido de contraseña
+    private void showForgotPasswordPanel() {
+        // Oculta los paneles de login/registro y muestra el de "Olvidé Contraseña"
+        fondo.setVisible(false); // Oculta el fondo que contiene login/register/cover
+        // cover y loginAndRegister se ocultan porque están dentro de fondo
+        
+        // Asegurarse de que los paneles de superposición estén ocultos (excepto overlay)
+        loading.setVisible(false);
+        verifyCode.setVisible(false);
+        // Asegurarse de que otros paneles de contenido estén ocultos
+        if (mainMenuPanel != null) { mainMenuPanel.setVisible(false); }
+        if (panelProfileAndInventory != null) { panelProfileAndInventory.setVisible(false); }
+        if (panelCharacterCreation != null) { panelCharacterCreation.setVisible(false); }
+        if (gamePanel != null) { gamePanel.setVisible(false); }
 
+        forgotPasswordPanel.showEmailInput(); // Asegura que muestre la vista de email
+        forgotPasswordPanel.setVisible(true);
+        overlayPanel.setVisible(true); // El overlay debe cubrir toda la pantalla
+        setTitle("VEILWALKER - Recuperar Contraseña");
+        revalidate();
+        repaint();
+    }
+
+     private void requestPasswordResetCode() {
+        String email = forgotPasswordPanel.getEmail();
+        System.out.println("requestPasswordResetCode: Intentando enviar código a " + email);
+
+        if (email.isEmpty()) {
+            showMessage(Message.MessageType.ERROR, "Por favor, ingresa tu correo electrónico.");
+            System.out.println("requestPasswordResetCode: Email vacío.");
+            return;
+        }
+
+        loading.setVisible(true);
+        overlayPanel.setVisible(true);
+
+        new SwingWorker<ApiClient.ApiResponse, Void>() {
+            @Override
+            protected ApiClient.ApiResponse doInBackground() throws Exception {
+                System.out.println("SwingWorker (requestPasswordResetCode): Llamando a ApiClient.requestPasswordResetCode...");
+                return ApiClient.requestPasswordResetCode(email);
+            }
+
+            @Override
+            protected void done() {
+                loading.setVisible(false); // Siempre ocultar loading
+                try {
+                    ApiClient.ApiResponse result = get();
+                    System.out.println("SwingWorker (requestPasswordResetCode) done. Success: " + result.isSuccess() + ", Message: " + result.getMessage() + ", ErrorCode: " + result.getErrorCode());
+                    if (result.isSuccess()) {
+                        showMessage(Message.MessageType.SUCCESS, result.getMessage());
+                        forgotPasswordPanel.showCodeInput();
+                        // overlayPanel se mantiene visible si showCodeInput lo necesita o se ocultará en el siguiente paso
+                    } else {
+                        overlayPanel.setVisible(false); // Ocultar overlay en caso de fallo
+                        showMessage(Message.MessageType.ERROR, result.getMessage());
+                    }
+                } catch (Exception ex) {
+                    overlayPanel.setVisible(false); // Ocultar overlay en caso de excepción
+                    ex.printStackTrace();
+                    showMessage(Message.MessageType.ERROR, "Error al solicitar código de restablecimiento: " + ex.getMessage());
+                }
+            }
+        }.execute();
+    }
+
+    private void resetPasswordWithCode() {
+        String email = forgotPasswordPanel.getEmail();
+        String code = forgotPasswordPanel.getCode();
+        String newPassword = forgotPasswordPanel.getNewPassword();
+        String confirmPassword = forgotPasswordPanel.getConfirmPassword();
+
+        System.out.println("resetPasswordWithCode: Intentando restablecer contraseña.");
+        System.out.println("Email: " + email + ", Code: " + code + ", NewPass Length: " + newPassword.length());
+
+        if (email.isEmpty() || code.isEmpty() || newPassword.isEmpty() || confirmPassword.isEmpty()) {
+            showMessage(Message.MessageType.ERROR, "Por favor, ingresa el correo, código y la nueva contraseña.");
+            System.out.println("resetPasswordWithCode: Campos vacíos.");
+            return;
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            showMessage(Message.MessageType.ERROR, "Las contraseñas no coinciden.");
+            System.out.println("resetPasswordWithCode: Contraseñas no coinciden.");
+            return;
+        }
+        if (newPassword.length() < 6) {
+            showMessage(Message.MessageType.ERROR, "La nueva contraseña debe tener al menos 6 caracteres.");
+            System.out.println("resetPasswordWithCode: Contraseña muy corta.");
+            return;
+        }
+
+        loading.setVisible(true);
+        overlayPanel.setVisible(true);
+
+        new SwingWorker<ApiClient.ApiResponse, Void>() {
+            @Override
+            protected ApiClient.ApiResponse doInBackground() throws Exception {
+                System.out.println("SwingWorker (resetPasswordWithCode): Llamando a ApiClient.resetPasswordWithCode...");
+                return ApiClient.resetPasswordWithCode(email, code, newPassword);
+            }
+
+            @Override
+            protected void done() {
+                loading.setVisible(false); // Siempre ocultar loading
+                try {
+                    ApiClient.ApiResponse result = get();
+                    System.out.println("SwingWorker (resetPasswordWithCode) done. Success: " + result.isSuccess() + ", Message: " + result.getMessage() + ", ErrorCode: " + result.getErrorCode());
+                    if (result.isSuccess()) {
+                        showMessage(Message.MessageType.SUCCESS, result.getMessage());
+                        forgotPasswordPanel.setVisible(false);
+                        overlayPanel.setVisible(false); // Ocultar overlay en caso de éxito
+                        fondo.setVisible(true);
+                        setTitle("VEILWALKER - Login");
+                        revalidate();
+                        repaint();
+                        forgotPasswordPanel.showEmailInput();
+                    } else {
+                        overlayPanel.setVisible(false); // Ocultar overlay en caso de fallo
+                        showMessage(Message.MessageType.ERROR, result.getMessage());
+                    }
+                } catch (Exception ex) {
+                    overlayPanel.setVisible(false); // Ocultar overlay en caso de excepción
+                    ex.printStackTrace();
+                    showMessage(Message.MessageType.ERROR, "Error al restablecer contraseña: " + ex.getMessage());
+                }
+            }
+        }.execute();
+    }
     private void showMessage(Message.MessageType messageType, String message) {
-        Message ms = new Message();
-        ms.showMessage(messageType, message);
+    messagePanelInstance.showMessage(messageType, message);
+        
         TimingTarget target = new TimingTargetAdapter() {
             @Override
             public void begin() {
-                if (!ms.isShow()) {
-                    getLayeredPane().add(ms, JLayeredPane.POPUP_LAYER); 
-                    ms.setBounds( (getWidth() - ms.getPreferredSize().width) / 2, 10, ms.getPreferredSize().width, ms.getPreferredSize().height); 
-                    ms.setVisible(true);
-                    getLayeredPane().repaint();
-                }
+                // ¡CORRECCIÓN CLAVE AQUÍ! Asegurarse de que el panel se añade SIEMPRE
+                // y se hace visible. Se eliminó la condición 'if (!ms.isShow())'
+                // que podía causar que el mensaje no apareciera si ya había otro.
+                getLayeredPane().add(messagePanelInstance, JLayeredPane.POPUP_LAYER);
+                messagePanelInstance.setBounds( (getWidth() - messagePanelInstance.getPreferredSize().width) / 2, 10, messagePanelInstance.getPreferredSize().width, messagePanelInstance.getPreferredSize().height);
+                messagePanelInstance.setVisible(true);
+                getLayeredPane().repaint();
             }
 
             @Override
             public void timingEvent(float fraction) {
                 float f;
-                if (ms.isShow()) { 
-                    f = 40 * fraction; 
-                } else { 
-                    f = 40 * (1f - fraction); 
+                if (messagePanelInstance.isShow()) {
+                    f = 40 * fraction;
+                } else {
+                    f = 40 * (1f - fraction);
                 }
-                ms.setLocation((getWidth() - ms.getPreferredSize().width) / 2, (int) (f - 30));
+                messagePanelInstance.setLocation((getWidth() - messagePanelInstance.getPreferredSize().width) / 2, (int) (f - 30));
                 getLayeredPane().revalidate();
                 getLayeredPane().repaint();
             }
 
+           
             @Override
             public void end() {
-                if (ms.isShow()) {
+                if (messagePanelInstance.isShow()) {
                     new Thread(() -> {
                         try {
                             Thread.sleep(2000);
-                            ms.setShow(false); 
+                            messagePanelInstance.setShow(false);
                             Animator exitAnimator = new Animator(300, new TimingTargetAdapter() {
                                 @Override
                                 public void timingEvent(float fraction) {
                                     float f = 40 * (1f - fraction);
-                                    ms.setLocation((getWidth() - ms.getPreferredSize().width) / 2, (int) (f - 30));
+                                    messagePanelInstance.setLocation((getWidth() - messagePanelInstance.getPreferredSize().width) / 2, (int) (f - 30));
                                     getLayeredPane().revalidate();
                                     getLayeredPane().repaint();
                                 }
+
                                 @Override
                                 public void end() {
-                                    getLayeredPane().remove(ms); 
+                                    getLayeredPane().remove(messagePanelInstance);
                                     getLayeredPane().revalidate();
                                     getLayeredPane().repaint();
                                 }
@@ -652,16 +896,17 @@ public class LoginBase extends javax.swing.JFrame {
                             exitAnimator.setDeceleration(0.5f);
                             exitAnimator.start();
                         } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
                         }
                     }).start();
-                } 
+                }
             }
         };
         Animator animator = new Animator(300, target);
         animator.setResolution(0);
         animator.setAcceleration(0.5f);
         animator.setDeceleration(0.5f);
-        animator.start(); 
+        animator.start();
     }
 
     private void performLogout() {
@@ -678,36 +923,43 @@ public class LoginBase extends javax.swing.JFrame {
         if (panelCharacterCreation != null) {
             panelCharacterCreation.setVisible(false);
         }
-        if (gamePanel != null) { // Asegurarse de ocultar el panel del juego si está visible
+        if (gamePanel != null) {
             gamePanel.setVisible(false);
         }
+          // Ocultar paneles superpuestos
         loading.setVisible(false);
         verifyCode.setVisible(false);
+        forgotPasswordPanel.setVisible(false); // ¡NUEVO! Ocultar forgot password panel
         overlayPanel.setVisible(false);
 
-        getLayeredPane().removeAll();
+         if (messagePanelInstance != null && messagePanelInstance.isVisible() && messagePanelInstance.getParent() == getLayeredPane()) {
+            getLayeredPane().remove(messagePanelInstance);
+        }
+         
+        getLayeredPane().removeAll(); // Esta línea limpia todos los componentes del layered pane
         
         getLayeredPane().add(fondo, JLayeredPane.DEFAULT_LAYER);
         fondo.setBounds(0, 0, getWidth(), getHeight());
-        fondo.setVisible(true); 
+        fondo.setVisible(true);
 
         getLayeredPane().add(loading, JLayeredPane.POPUP_LAYER);
         getLayeredPane().add(verifyCode, JLayeredPane.POPUP_LAYER);
         getLayeredPane().add(overlayPanel, JLayeredPane.POPUP_LAYER);
         
-        isLogin = true; 
-        loginAndRegister.showLogin(true); 
-        cover.login(true); 
-
-        loginAndRegister.clearFields();
-        verifyCode.clearFields(); 
+        isLogin = true;
+        loginAndRegister.showLogin(true);
+        cover.login(isLogin); // Asegurar que el cover muestra el texto correcto para Login
         
-        setTitle("Juego RPG - Login");
+        loginAndRegister.clearFields();
+        verifyCode.clearFields();
+        forgotPasswordPanel.clearFields(); // ¡NUEVO! Limpiar campos de forgot password panel
+        forgotPasswordPanel.showEmailInput(); // ¡NUEVO! Resetear forgot password panel a la vista de email
+
+        setTitle("JVEILWALKER");
         revalidate();
         repaint();    
         showMessage(Message.MessageType.INFO, "Sesión cerrada exitosamente.");
     }
-
     // EL initComponents()  PARA UN JFRAME
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -720,29 +972,28 @@ public class LoginBase extends javax.swing.JFrame {
         setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
-
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables
 
-     // Clase interna FondoPanel para el fondo de la ventana principal
+    // Clase interna FondoPanel para el fondo de la ventana principal (INTACTA)
     class FondoPanel extends JPanel {
         private Image imagen;
 
         public FondoPanel() {
-            setOpaque(true); 
+            setOpaque(true);
             try {
-                URL imageUrl = getClass().getResource("/devt/login/images/guzz_1.png"); 
-                if (imageUrl != null) { 
+                URL imageUrl = getClass().getResource("/devt/login/images/guzz2.png");
+                if (imageUrl != null) {
                     imagen = new ImageIcon(imageUrl).getImage();
                 } else {
-                    System.err.println("Error: No se encontró la imagen de fondo en la ruta: /devt/login/images/guzz_1.png");
-                    setBackground(new Color(20, 20, 20)); 
+                    System.err.println("Error: No se encontró la imagen de fondo en la ruta: /devt/login/images/guzz2.png. Usando color de fondo.");
+                    setBackground(new Color(20, 20, 20));
                 }
             } catch (Exception e) {
                 System.err.println("Error al cargar imagen de fondo: " + e.getMessage());
-                    setBackground(new Color(20, 20, 20)); 
-                }
+                setBackground(new Color(20, 20, 20));
             }
+        }
 
         @Override
         protected void paintComponent(Graphics g) {

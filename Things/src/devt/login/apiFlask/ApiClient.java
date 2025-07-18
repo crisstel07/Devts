@@ -239,4 +239,34 @@ public class ApiClient {
         // Si no, deberías usar getOrCreateCharacterProfile y manejar la respuesta de creación.
         return sendRequest("characters", "POST", jsonInput); // Asumiendo que tienes un /api/characters POST
     }
+
+    // --- ¡NUEVOS MÉTODOS PARA RESTABLECIMIENTO DE CONTRASEÑA! ---
+
+    /**
+     * Solicita un código de restablecimiento de contraseña para un email.
+     * @param email El correo electrónico del usuario.
+     * @return ApiResponse con el resultado de la operación.
+     */
+    public static ApiResponse requestPasswordResetCode(String email) {
+        JsonObject jsonInput = new JsonObject();
+        jsonInput.addProperty("email", email); // Asegúrate que tu Flask espera 'email' para este endpoint
+        // Reemplaza "request_password_reset_code" con el endpoint real de tu API Flask si es diferente
+        return sendRequest("request_password_reset_code", "POST", jsonInput);
+    }
+
+    /**
+     * Restablece la contraseña de un usuario usando un código de verificación.
+     * @param email El correo electrónico del usuario.
+     * @param code El código de verificación recibido.
+     * @param newPassword La nueva contraseña a establecer.
+     * @return ApiResponse con el resultado de la operación.
+     */
+    public static ApiResponse resetPasswordWithCode(String email, String code, String newPassword) {
+        JsonObject jsonInput = new JsonObject();
+        jsonInput.addProperty("email", email); // Asegúrate que tu Flask espera 'email'
+        jsonInput.addProperty("code", code);
+        jsonInput.addProperty("new_password", newPassword); // Asegúrate que tu Flask espera 'new_password'
+        // Reemplaza "reset_password_with_code" con el endpoint real de tu API Flask si es diferente
+        return sendRequest("reset_password_with_code", "POST", jsonInput);
+    }
 }
