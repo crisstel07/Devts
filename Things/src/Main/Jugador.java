@@ -417,7 +417,6 @@ long ahoras = System.nanoTime();
         if (vidas <= 0 && estado != Estado.MUERTO) {
             estado = Estado.MUERTO;
             muerteAnim.actualizar();
-            Teclado.resetear();
         }
 
         estaCaminando = (velocidadX != 0) && enSuelo && !estaAtacando;

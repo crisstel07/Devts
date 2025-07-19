@@ -8,7 +8,7 @@ import java.awt.event.KeyListener;
 public class Teclado implements KeyListener {
 
     public static boolean izquierda, derecha, arriba, abajo, saltar, mostrarHitbox;
-public static boolean curar = false;
+public boolean curar = false;
 
     @Override
     public void keyTyped(KeyEvent e) {
@@ -32,7 +32,7 @@ public static boolean curar = false;
         }
         if (tecla == KeyEvent.VK_W) {
             arriba = true;
-        } 
+        }
         if (tecla == KeyEvent.VK_S) {
             abajo = true;
         }
@@ -73,7 +73,7 @@ public static boolean curar = false;
 
 
     }
-    public static void resetear() {
+    public void resetear() {
     izquierda = false;
     derecha = false;
     arriba = false;
