@@ -13,6 +13,7 @@ import java.io.InputStream;
 import Main.PanelMenuLateral; 
 import Main.PanelAyuda; 
 import Main.PanelCréditos; 
+import devt.login.components.ProfileStatsDisplayPanel;
 
 // Importa tu ViewSystem existente
 import devt.login.view.ViewSystem; 
@@ -31,7 +32,7 @@ public class VentanaJuego extends JPanel { // ¡Ahora es un JPanel que lo contie
     // Paneles de contenido principal (ahora son "tarjetas" en el CardLayout)
     private ViewSystem mainMenuPanel; // Tu ViewSystem como menú principal
     private PanelJuego panelJuego;       // El panel donde se ejecuta la lógica del juego
-    private ProfilePanel profilePanel;   // Tu panel de perfil
+    private ProfileStatsDisplayPanel profilePanel;   // Tu panel de perfil
 
     // Paneles y componentes para overlays (menú lateral, ayuda, créditos, pausa)
     private JLayeredPane layeredPane; // Usamos un JLayeredPane interno para los overlays
@@ -91,7 +92,7 @@ public class VentanaJuego extends JPanel { // ¡Ahora es un JPanel que lo contie
         contentPanel.add(panelJuego, "Game"); // Añade al CardLayout con nombre "Game"
 
         // 3. Inicializar y añadir el Panel de Perfil como una "tarjeta"
-        profilePanel = new ProfilePanel(this); // Pasa esta VentanaJuego (JPanel) para que el perfil pueda interactuar
+        profilePanel = new ProfileStatsDisplayPanel(this); // Pasa esta VentanaJuego (JPanel) para que el perfil pueda interactuar
         contentPanel.add(profilePanel, "Profile"); // Añade al CardLayout con nombre "Profile"
 
         // 4. Inicializar y añadir el panel del menú de pausa (se superpone en JLayeredPane)
